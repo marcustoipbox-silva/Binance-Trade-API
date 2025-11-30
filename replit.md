@@ -134,6 +134,12 @@ Preferred communication style: Simple, everyday language.
 - **Demo Mode is the recommended solution** for testing on Replit
 - For real trading, the system must be deployed to a VPS in an unrestricted region
 
+**VirtualBox Deployment:**
+- See `DEPLOY_VIRTUALBOX.md` for complete setup guide
+- Use `setup-vm.sh` script for automated installation on Ubuntu
+- Requires Ubuntu Server 22.04 LTS with bridged network
+- PM2 manages the Node.js process with auto-restart
+
 **Database:**
 - **PostgreSQL** - Persistent data storage
   - Configured for Neon Database serverless deployment
