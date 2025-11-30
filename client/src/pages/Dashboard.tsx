@@ -120,9 +120,18 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground">Gerencie seus robôs de trading automatizado</p>
           </div>
           <Button 
-            onClick={() => setCreateModalOpen(true)} 
+            onClick={() => {
+              if (!connectionStatus?.connected) {
+                toast({
+                  title: "API não conectada",
+                  description: "Vá em Configurações e ative o Modo Demo ou conecte sua API Binance para criar robôs.",
+                  variant: "destructive",
+                });
+                return;
+              }
+              setCreateModalOpen(true);
+            }} 
             data-testid="button-create-bot"
-            disabled={!connectionStatus?.connected}
           >
             <Plus className="h-4 w-4 mr-2" />
             Novo Robô
