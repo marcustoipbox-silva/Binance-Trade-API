@@ -4,13 +4,25 @@ import type { Candle, MarketData, AccountBalance } from "@shared/schema";
 let mainClient: MainClient | null = null;
 let wsClient: WebsocketClient | null = null;
 let demoMode = false;
+let testnetMode = false;
 
 export function setDemoMode(enabled: boolean): void {
   demoMode = enabled;
+  if (enabled) {
+    testnetMode = false;
+  }
 }
 
 export function isDemoMode(): boolean {
   return demoMode;
+}
+
+export function setTestnetMode(enabled: boolean): void {
+  testnetMode = enabled;
+}
+
+export function isTestnetMode(): boolean {
+  return testnetMode;
 }
 
 interface BinanceConfig {
@@ -21,17 +33,24 @@ interface BinanceConfig {
 
 export function initializeBinanceClient(config: BinanceConfig): boolean {
   try {
+    const useTestnet = config.testnet === true;
+    testnetMode = useTestnet;
+    demoMode = false;
+    
     mainClient = new MainClient({
       api_key: config.apiKey,
       api_secret: config.secretKey,
+      useTestnet: useTestnet,
     });
     
     wsClient = new WebsocketClient({
       api_key: config.apiKey,
       api_secret: config.secretKey,
       beautify: true,
+      wsUrl: useTestnet ? "wss://testnet.binance.vision" : undefined,
     });
     
+    console.log(`Binance client initialized in ${useTestnet ? "TESTNET" : "PRODUCTION"} mode`);
     return true;
   } catch (error) {
     console.error("Failed to initialize Binance client:", error);
