@@ -120,6 +120,13 @@ Preferred communication style: Simple, everyday language.
   - Requires API key and secret key
   - Used for market data, account balances, and order execution
   - Connection managed via 'binance' npm package (MainClient, WebsocketClient)
+  - Supports both Production and Testnet environments
+  - Testnet available at testnet.binance.vision for testing with fake funds
+
+**Connection Modes:**
+- **Production Mode** - Real Binance trading with actual funds
+- **Testnet Mode** - Binance Testnet environment with fictitious funds (recommended for testing)
+- **Demo Mode** - Fully simulated environment when Binance API is unavailable
 
 **Database:**
 - **PostgreSQL** - Persistent data storage
