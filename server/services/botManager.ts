@@ -2,8 +2,53 @@ import { storage } from "../storage";
 import * as binance from "./binance";
 import { analyzeIndicators } from "./indicators";
 import type { Bot, BotWithStats, InsertBot, InsertTrade, Candle, IndicatorSettings } from "@shared/schema";
+import { indicatorSettingsSchema } from "@shared/schema";
 
 const activeIntervals: Map<string, NodeJS.Timeout> = new Map();
+
+function ensureValidIndicatorSettings(indicators: unknown): IndicatorSettings {
+  const defaultSettings: IndicatorSettings = {
+    rsi: { enabled: true, period: 14, overbought: 70, oversold: 30 },
+    macd: { enabled: true, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
+    bollingerBands: { enabled: true, period: 20, stdDev: 2 },
+    ema: { enabled: true, shortPeriod: 12, longPeriod: 26 },
+  };
+
+  if (!indicators || typeof indicators !== "object") {
+    return defaultSettings;
+  }
+
+  const parsed = indicatorSettingsSchema.safeParse(indicators);
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  const ind = indicators as Partial<IndicatorSettings>;
+  return {
+    rsi: {
+      enabled: ind.rsi?.enabled ?? defaultSettings.rsi.enabled,
+      period: ind.rsi?.period ?? defaultSettings.rsi.period,
+      overbought: ind.rsi?.overbought ?? defaultSettings.rsi.overbought,
+      oversold: ind.rsi?.oversold ?? defaultSettings.rsi.oversold,
+    },
+    macd: {
+      enabled: ind.macd?.enabled ?? defaultSettings.macd.enabled,
+      fastPeriod: ind.macd?.fastPeriod ?? defaultSettings.macd.fastPeriod,
+      slowPeriod: ind.macd?.slowPeriod ?? defaultSettings.macd.slowPeriod,
+      signalPeriod: ind.macd?.signalPeriod ?? defaultSettings.macd.signalPeriod,
+    },
+    bollingerBands: {
+      enabled: ind.bollingerBands?.enabled ?? defaultSettings.bollingerBands.enabled,
+      period: ind.bollingerBands?.period ?? defaultSettings.bollingerBands.period,
+      stdDev: ind.bollingerBands?.stdDev ?? defaultSettings.bollingerBands.stdDev,
+    },
+    ema: {
+      enabled: ind.ema?.enabled ?? defaultSettings.ema.enabled,
+      shortPeriod: ind.ema?.shortPeriod ?? defaultSettings.ema.shortPeriod,
+      longPeriod: ind.ema?.longPeriod ?? defaultSettings.ema.longPeriod,
+    },
+  };
+}
 
 const intervalMs: Record<string, number> = {
   "1m": 60 * 1000,
@@ -109,7 +154,7 @@ async function executeBotCycle(botId: string): Promise<void> {
       return;
     }
 
-    const indicators = bot.indicators as IndicatorSettings;
+    const indicators = ensureValidIndicatorSettings(bot.indicators);
     const analysis = analyzeIndicators(candles, indicators);
     
     console.log(`[Bot ${bot.name}] Analysis: ${analysis.overallSignal} (Buy: ${analysis.buyCount}, Sell: ${analysis.sellCount})`);
@@ -333,7 +378,7 @@ export async function getBotWithStats(botId: string): Promise<BotWithStats | nul
   const bot = await storage.getBot(botId);
   if (!bot) return null;
 
-  const indicators = bot.indicators as IndicatorSettings;
+  const indicators = ensureValidIndicatorSettings(bot.indicators);
   const activeIndicators: string[] = [];
   if (indicators.rsi.enabled) activeIndicators.push("RSI");
   if (indicators.macd.enabled) activeIndicators.push("MACD");
