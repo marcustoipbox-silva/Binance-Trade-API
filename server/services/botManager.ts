@@ -1,0 +1,373 @@
+import { storage } from "../storage";
+import * as binance from "./binance";
+import { analyzeIndicators } from "./indicators";
+import type { Bot, BotWithStats, InsertBot, InsertTrade, Candle, IndicatorSettings } from "@shared/schema";
+
+const activeIntervals: Map<string, NodeJS.Timeout> = new Map();
+
+const intervalMs: Record<string, number> = {
+  "1m": 60 * 1000,
+  "5m": 5 * 60 * 1000,
+  "15m": 15 * 60 * 1000,
+  "30m": 30 * 60 * 1000,
+  "1h": 60 * 60 * 1000,
+  "4h": 4 * 60 * 60 * 1000,
+  "1d": 24 * 60 * 60 * 1000,
+};
+
+export async function createBot(config: InsertBot): Promise<Bot> {
+  const bot = await storage.createBot({
+    ...config,
+    status: "stopped",
+  });
+  return bot;
+}
+
+export async function startBot(botId: string): Promise<Bot> {
+  const bot = await storage.getBot(botId);
+  if (!bot) {
+    throw new Error("Bot não encontrado");
+  }
+
+  if (!binance.isConnected()) {
+    throw new Error("API Binance não conectada");
+  }
+
+  if (activeIntervals.has(botId)) {
+    clearInterval(activeIntervals.get(botId)!);
+  }
+
+  const interval = setInterval(async () => {
+    try {
+      await executeBotCycle(botId);
+    } catch (error) {
+      console.error(`Bot ${botId} cycle error:`, error);
+    }
+  }, intervalMs[bot.interval] || intervalMs["1h"]);
+
+  activeIntervals.set(botId, interval);
+
+  const updatedBot = await storage.updateBot(botId, { status: "active" });
+  
+  setTimeout(() => executeBotCycle(botId), 1000);
+  
+  return updatedBot!;
+}
+
+export async function pauseBot(botId: string): Promise<Bot> {
+  if (activeIntervals.has(botId)) {
+    clearInterval(activeIntervals.get(botId)!);
+    activeIntervals.delete(botId);
+  }
+
+  const updatedBot = await storage.updateBot(botId, { status: "paused" });
+  if (!updatedBot) {
+    throw new Error("Bot não encontrado");
+  }
+  return updatedBot;
+}
+
+export async function stopBot(botId: string): Promise<Bot> {
+  if (activeIntervals.has(botId)) {
+    clearInterval(activeIntervals.get(botId)!);
+    activeIntervals.delete(botId);
+  }
+
+  const updatedBot = await storage.updateBot(botId, { 
+    status: "stopped",
+    lastSignal: null,
+    lastSignalTime: null,
+  });
+  if (!updatedBot) {
+    throw new Error("Bot não encontrado");
+  }
+  return updatedBot;
+}
+
+export async function deleteBot(botId: string): Promise<void> {
+  if (activeIntervals.has(botId)) {
+    clearInterval(activeIntervals.get(botId)!);
+    activeIntervals.delete(botId);
+  }
+  
+  await storage.deleteBot(botId);
+}
+
+async function executeBotCycle(botId: string): Promise<void> {
+  const bot = await storage.getBot(botId);
+  if (!bot || bot.status !== "active") {
+    return;
+  }
+
+  console.log(`[Bot ${bot.name}] Executing cycle for ${bot.symbol}`);
+
+  try {
+    const candles = await binance.getCandles(bot.symbol, bot.interval, 100);
+    
+    if (candles.length < 30) {
+      console.log(`[Bot ${bot.name}] Not enough candle data`);
+      return;
+    }
+
+    const indicators = bot.indicators as IndicatorSettings;
+    const analysis = analyzeIndicators(candles, indicators);
+    
+    console.log(`[Bot ${bot.name}] Analysis: ${analysis.overallSignal} (Buy: ${analysis.buyCount}, Sell: ${analysis.sellCount})`);
+
+    const signalMap: Record<string, string> = {
+      buy: "buy",
+      sell: "sell",
+      hold: "hold",
+    };
+
+    await storage.updateBot(botId, {
+      lastSignal: signalMap[analysis.overallSignal],
+      lastSignalTime: new Date(),
+    });
+
+    const shouldTrade = 
+      (analysis.overallSignal === "buy" && analysis.buyCount >= bot.minSignals) ||
+      (analysis.overallSignal === "sell" && analysis.sellCount >= bot.minSignals);
+
+    if (!shouldTrade) {
+      console.log(`[Bot ${bot.name}] No trade signal (min signals: ${bot.minSignals})`);
+      return;
+    }
+
+    const currentPrice = await binance.getPrice(bot.symbol);
+    const symbolInfo = await binance.getSymbolMinQuantity(bot.symbol);
+    
+    const openPosition = await storage.getOpenPosition(botId);
+
+    if (analysis.overallSignal === "buy" && !openPosition) {
+      const investmentAmount = bot.investment;
+      let quantity = investmentAmount / currentPrice;
+      
+      if (quantity * currentPrice < symbolInfo.minNotional) {
+        console.log(`[Bot ${bot.name}] Order too small (min notional: ${symbolInfo.minNotional})`);
+        return;
+      }
+      
+      quantity = binance.formatQuantity(quantity, symbolInfo.stepSize);
+      
+      console.log(`[Bot ${bot.name}] Placing BUY order: ${quantity} @ ${currentPrice}`);
+      
+      try {
+        const order = await binance.placeMarketOrder(bot.symbol, "BUY", quantity);
+        
+        const trade: InsertTrade = {
+          botId,
+          symbol: bot.symbol,
+          side: "buy",
+          type: "MARKET",
+          price: currentPrice,
+          amount: quantity,
+          total: quantity * currentPrice,
+          indicators: analysis.signals
+            .filter(s => s.signal === "buy")
+            .map(s => s.name),
+          binanceOrderId: order.orderId?.toString(),
+          status: "completed",
+        };
+        
+        await storage.createTrade(trade);
+        await storage.updateBot(botId, {
+          totalTrades: bot.totalTrades + 1,
+          currentBalance: quantity,
+        });
+        
+        console.log(`[Bot ${bot.name}] BUY order executed: ${order.orderId}`);
+      } catch (error: any) {
+        console.error(`[Bot ${bot.name}] BUY order failed:`, error.message);
+      }
+      
+    } else if (analysis.overallSignal === "sell" && openPosition) {
+      const quantity = bot.currentBalance;
+      
+      if (quantity <= 0) {
+        console.log(`[Bot ${bot.name}] No position to sell`);
+        return;
+      }
+      
+      const formattedQty = binance.formatQuantity(quantity, symbolInfo.stepSize);
+      
+      console.log(`[Bot ${bot.name}] Placing SELL order: ${formattedQty} @ ${currentPrice}`);
+      
+      try {
+        const order = await binance.placeMarketOrder(bot.symbol, "SELL", formattedQty);
+        
+        const entryPrice = openPosition.price;
+        const pnl = (currentPrice - entryPrice) * formattedQty;
+        const pnlPercent = ((currentPrice - entryPrice) / entryPrice) * 100;
+        
+        const trade: InsertTrade = {
+          botId,
+          symbol: bot.symbol,
+          side: "sell",
+          type: "MARKET",
+          price: currentPrice,
+          amount: formattedQty,
+          total: formattedQty * currentPrice,
+          pnl,
+          pnlPercent,
+          indicators: analysis.signals
+            .filter(s => s.signal === "sell")
+            .map(s => s.name),
+          binanceOrderId: order.orderId?.toString(),
+          status: "completed",
+        };
+        
+        await storage.createTrade(trade);
+        
+        const newWinningTrades = pnl > 0 ? bot.winningTrades + 1 : bot.winningTrades;
+        await storage.updateBot(botId, {
+          totalTrades: bot.totalTrades + 1,
+          winningTrades: newWinningTrades,
+          totalPnl: bot.totalPnl + pnl,
+          currentBalance: 0,
+        });
+        
+        console.log(`[Bot ${bot.name}] SELL order executed: ${order.orderId}, PnL: ${pnl.toFixed(2)}`);
+      } catch (error: any) {
+        console.error(`[Bot ${bot.name}] SELL order failed:`, error.message);
+      }
+    }
+
+    if (openPosition && bot.currentBalance > 0) {
+      const entryPrice = openPosition.price;
+      const pnlPercent = ((currentPrice - entryPrice) / entryPrice) * 100;
+      
+      if (bot.stopLoss > 0 && pnlPercent <= -bot.stopLoss) {
+        console.log(`[Bot ${bot.name}] Stop loss triggered at ${pnlPercent.toFixed(2)}%`);
+        await executeStopLoss(botId, bot, currentPrice, entryPrice);
+      } else if (bot.takeProfit > 0 && pnlPercent >= bot.takeProfit) {
+        console.log(`[Bot ${bot.name}] Take profit triggered at ${pnlPercent.toFixed(2)}%`);
+        await executeTakeProfit(botId, bot, currentPrice, entryPrice);
+      }
+    }
+
+  } catch (error: any) {
+    console.error(`[Bot ${bot.name}] Cycle error:`, error.message);
+    await storage.updateBot(botId, { status: "error" });
+  }
+}
+
+async function executeStopLoss(botId: string, bot: Bot, currentPrice: number, entryPrice: number): Promise<void> {
+  const symbolInfo = await binance.getSymbolMinQuantity(bot.symbol);
+  const quantity = binance.formatQuantity(bot.currentBalance, symbolInfo.stepSize);
+  
+  try {
+    const order = await binance.placeMarketOrder(bot.symbol, "SELL", quantity);
+    
+    const pnl = (currentPrice - entryPrice) * quantity;
+    const pnlPercent = ((currentPrice - entryPrice) / entryPrice) * 100;
+    
+    const trade: InsertTrade = {
+      botId,
+      symbol: bot.symbol,
+      side: "sell",
+      type: "MARKET",
+      price: currentPrice,
+      amount: quantity,
+      total: quantity * currentPrice,
+      pnl,
+      pnlPercent,
+      indicators: ["STOP_LOSS"],
+      binanceOrderId: order.orderId?.toString(),
+      status: "completed",
+    };
+    
+    await storage.createTrade(trade);
+    await storage.updateBot(botId, {
+      totalTrades: bot.totalTrades + 1,
+      totalPnl: bot.totalPnl + pnl,
+      currentBalance: 0,
+    });
+    
+    console.log(`[Bot ${bot.name}] Stop loss executed, PnL: ${pnl.toFixed(2)}`);
+  } catch (error: any) {
+    console.error(`[Bot ${bot.name}] Stop loss failed:`, error.message);
+  }
+}
+
+async function executeTakeProfit(botId: string, bot: Bot, currentPrice: number, entryPrice: number): Promise<void> {
+  const symbolInfo = await binance.getSymbolMinQuantity(bot.symbol);
+  const quantity = binance.formatQuantity(bot.currentBalance, symbolInfo.stepSize);
+  
+  try {
+    const order = await binance.placeMarketOrder(bot.symbol, "SELL", quantity);
+    
+    const pnl = (currentPrice - entryPrice) * quantity;
+    const pnlPercent = ((currentPrice - entryPrice) / entryPrice) * 100;
+    
+    const trade: InsertTrade = {
+      botId,
+      symbol: bot.symbol,
+      side: "sell",
+      type: "MARKET",
+      price: currentPrice,
+      amount: quantity,
+      total: quantity * currentPrice,
+      pnl,
+      pnlPercent,
+      indicators: ["TAKE_PROFIT"],
+      binanceOrderId: order.orderId?.toString(),
+      status: "completed",
+    };
+    
+    await storage.createTrade(trade);
+    await storage.updateBot(botId, {
+      totalTrades: bot.totalTrades + 1,
+      winningTrades: bot.winningTrades + 1,
+      totalPnl: bot.totalPnl + pnl,
+      currentBalance: 0,
+    });
+    
+    console.log(`[Bot ${bot.name}] Take profit executed, PnL: ${pnl.toFixed(2)}`);
+  } catch (error: any) {
+    console.error(`[Bot ${bot.name}] Take profit failed:`, error.message);
+  }
+}
+
+export async function getBotWithStats(botId: string): Promise<BotWithStats | null> {
+  const bot = await storage.getBot(botId);
+  if (!bot) return null;
+
+  const indicators = bot.indicators as IndicatorSettings;
+  const activeIndicators: string[] = [];
+  if (indicators.rsi.enabled) activeIndicators.push("RSI");
+  if (indicators.macd.enabled) activeIndicators.push("MACD");
+  if (indicators.bollingerBands.enabled) activeIndicators.push("Bollinger");
+  if (indicators.ema.enabled) activeIndicators.push("EMA");
+
+  const pnlPercent = bot.investment > 0 ? (bot.totalPnl / bot.investment) * 100 : 0;
+  const winRate = bot.totalTrades > 0 ? (bot.winningTrades / bot.totalTrades) * 100 : 0;
+  const avgProfit = bot.totalTrades > 0 ? bot.totalPnl / bot.totalTrades : 0;
+
+  return {
+    ...bot,
+    pnlPercent,
+    winRate,
+    avgProfit,
+    activeIndicators,
+  };
+}
+
+export async function getAllBotsWithStats(): Promise<BotWithStats[]> {
+  const bots = await storage.getAllBots();
+  return Promise.all(
+    bots.map(async (bot) => {
+      const stats = await getBotWithStats(bot.id);
+      return stats!;
+    })
+  );
+}
+
+export async function analyzeSymbol(symbol: string, indicators: IndicatorSettings, interval: string = "1h") {
+  if (!binance.isConnected()) {
+    throw new Error("API Binance não conectada");
+  }
+
+  const candles = await binance.getCandles(symbol, interval, 100);
+  return analyzeIndicators(candles, indicators);
+}
