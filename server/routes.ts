@@ -6,9 +6,20 @@ import * as botManager from "./services/botManager";
 import { botConfigSchema, indicatorSettingsSchema } from "@shared/schema";
 
 let apiKeys: { apiKey: string; secretKey: string } | null = null;
+let demoModeEnabled = false;
 
 export async function registerRoutes(server: Server, app: Express): Promise<void> {
   
+  app.post("/api/binance/demo-mode", async (req, res) => {
+    try {
+      demoModeEnabled = true;
+      binance.setDemoMode(true);
+      res.json({ success: true, message: "Modo demo ativado com sucesso" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/binance/connect", async (req, res) => {
     try {
       const { apiKey, secretKey } = req.body;
@@ -37,6 +48,10 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
 
   app.get("/api/binance/status", async (req, res) => {
     try {
+      if (demoModeEnabled) {
+        return res.json({ connected: true, demoMode: true });
+      }
+      
       const connected = binance.isConnected();
       if (!connected) {
         return res.json({ connected: false });
