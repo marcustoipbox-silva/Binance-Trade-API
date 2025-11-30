@@ -128,6 +128,12 @@ Preferred communication style: Simple, everyday language.
 - **Testnet Mode** - Binance Testnet environment with fictitious funds (recommended for testing)
 - **Demo Mode** - Fully simulated environment when Binance API is unavailable
 
+**Important: Geographic Restriction on Replit:**
+- Binance blocks ALL API access (Production AND Testnet) from Replit server regions
+- This is a Binance-side IP restriction, not a code limitation
+- **Demo Mode is the recommended solution** for testing on Replit
+- For real trading, the system must be deployed to a VPS in an unrestricted region
+
 **Database:**
 - **PostgreSQL** - Persistent data storage
   - Configured for Neon Database serverless deployment

@@ -136,11 +136,11 @@ export function ApiKeyConfig() {
           <div className="flex items-start gap-2 p-3 rounded-md bg-red-500/10 border border-red-500/20">
             <Globe className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
             <div className="text-xs text-red-400">
-              <p className="font-medium mb-1">Restrição Geográfica Detectada</p>
-              <p>A API da Binance não está disponível nesta região do servidor. Você pode:</p>
+              <p className="font-medium mb-1">Restrição Geográfica (Produção e Testnet)</p>
+              <p>A Binance bloqueia TODA a API (produção e testnet) a partir dos servidores do Replit.</p>
               <ul className="list-disc list-inside space-y-0.5 mt-1">
-                <li>Usar o <strong>Modo Demo</strong> para explorar o sistema</li>
-                <li>Executar o sistema em um servidor sem restrições</li>
+                <li><strong>Use o Modo Demo</strong> para testar todas as funcionalidades</li>
+                <li>Para trading real, execute em um VPS próprio sem restrição</li>
               </ul>
             </div>
           </div>
@@ -217,7 +217,7 @@ export function ApiKeyConfig() {
               )}
             </Button>
           </div>
-        ) : (
+        ) : !hasGeoRestriction ? (
           <>
             <div className="flex items-start gap-2 p-3 rounded-md bg-yellow-500/10 border border-yellow-500/20">
               <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />
@@ -290,85 +290,116 @@ export function ApiKeyConfig() {
               </div>
             </div>
           </>
-        )}
+        ) : null}
 
         {!isConnected && !isDemoMode && (
           <>
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p className="font-medium">Como obter suas chaves {useTestnet ? "(Testnet)" : ""}:</p>
-              <ol className="list-decimal list-inside space-y-0.5">
-                {useTestnet ? (
-                  <>
-                    <li>Acesse <a href="https://testnet.binance.vision/" target="_blank" rel="noopener noreferrer" className="text-primary underline">testnet.binance.vision</a></li>
-                    <li>Faça login com sua conta GitHub</li>
-                    <li>Clique em "Generate HMAC_SHA256 Key"</li>
-                    <li>Copie a API Key e Secret Key geradas</li>
-                  </>
-                ) : (
-                  <>
-                    <li>Acesse sua conta Binance</li>
-                    <li>Vá em Gerenciamento de API</li>
-                    <li>Crie uma nova chave API com permissão de trading spot</li>
-                    <li>Copie e cole as chaves aqui</li>
-                  </>
-                )}
-              </ol>
-            </div>
-
-            <div className="flex flex-col gap-2 pt-2">
-              <Button 
-                onClick={() => connectMutation.mutate()}
-                disabled={!apiKey || !secretKey || connectMutation.isPending}
-                className="w-full"
-                data-testid="button-connect-api"
-              >
-                {connectMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Conectando...
-                  </>
-                ) : useTestnet ? (
-                  <>
-                    <FlaskConical className="h-4 w-4 mr-2" />
-                    Conectar ao Testnet
-                  </>
-                ) : (
-                  <>
-                    <Shield className="h-4 w-4 mr-2" />
-                    Conectar à Binance
-                  </>
-                )}
-              </Button>
-              
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-muted" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">ou</span>
-                </div>
+            {hasGeoRestriction ? (
+              /* When geo-restricted, show Demo Mode as primary option */
+              <div className="flex flex-col gap-3 pt-2">
+                <Button 
+                  onClick={() => demoModeMutation.mutate()}
+                  disabled={demoModeMutation.isPending}
+                  className="w-full"
+                  data-testid="button-demo-mode"
+                >
+                  {demoModeMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Ativando...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Usar Modo Demo (Recomendado)
+                    </>
+                  )}
+                </Button>
+                
+                <p className="text-xs text-center text-muted-foreground">
+                  O Modo Demo simula o ambiente completo de trading, permitindo que você explore todas as funcionalidades sem restrições.
+                </p>
               </div>
+            ) : (
+              /* When not geo-restricted, show full connection form */
+              <>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p className="font-medium">Como obter suas chaves {useTestnet ? "(Testnet)" : ""}:</p>
+                  <ol className="list-decimal list-inside space-y-0.5">
+                    {useTestnet ? (
+                      <>
+                        <li>Acesse <a href="https://testnet.binance.vision/" target="_blank" rel="noopener noreferrer" className="text-primary underline">testnet.binance.vision</a></li>
+                        <li>Faça login com sua conta GitHub</li>
+                        <li>Clique em "Generate HMAC_SHA256 Key"</li>
+                        <li>Copie a API Key e Secret Key geradas</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>Acesse sua conta Binance</li>
+                        <li>Vá em Gerenciamento de API</li>
+                        <li>Crie uma nova chave API com permissão de trading spot</li>
+                        <li>Copie e cole as chaves aqui</li>
+                      </>
+                    )}
+                  </ol>
+                </div>
 
-              <Button 
-                variant="outline"
-                onClick={() => demoModeMutation.mutate()}
-                disabled={demoModeMutation.isPending}
-                className="w-full"
-                data-testid="button-demo-mode"
-              >
-                {demoModeMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Ativando...
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4 mr-2" />
-                    Usar Modo Demo
-                  </>
-                )}
-              </Button>
-            </div>
+                <div className="flex flex-col gap-2 pt-2">
+                  <Button 
+                    onClick={() => connectMutation.mutate()}
+                    disabled={!apiKey || !secretKey || connectMutation.isPending}
+                    className="w-full"
+                    data-testid="button-connect-api"
+                  >
+                    {connectMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Conectando...
+                      </>
+                    ) : useTestnet ? (
+                      <>
+                        <FlaskConical className="h-4 w-4 mr-2" />
+                        Conectar ao Testnet
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Conectar à Binance
+                      </>
+                    )}
+                  </Button>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-muted" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">ou</span>
+                    </div>
+                  </div>
+
+                  <Button 
+                    variant="outline"
+                    onClick={() => demoModeMutation.mutate()}
+                    disabled={demoModeMutation.isPending}
+                    className="w-full"
+                    data-testid="button-demo-mode"
+                  >
+                    {demoModeMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Ativando...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-4 w-4 mr-2" />
+                        Usar Modo Demo
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
           </>
         )}
       </CardContent>
