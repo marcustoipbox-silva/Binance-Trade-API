@@ -1,0 +1,46 @@
+0|trading-bot  | Error getting account balance: {
+0|trading-bot  |   code: -2015,
+0|trading-bot  |   message: 'Invalid API-key, IP, or permissions for action.',
+0|trading-bot  |   body: {
+0|trading-bot  |     code: -2015,
+0|trading-bot  |     msg: 'Invalid API-key, IP, or permissions for action.'
+0|trading-bot  |   },
+0|trading-bot  |   headers: Object [AxiosHeaders] {
+0|trading-bot  |     'content-type': 'application/json;charset=UTF-8',
+0|trading-bot  |     'content-length': '70',
+0|trading-bot  |     connection: 'keep-alive',
+0|trading-bot  |     date: 'Sun, 30 Nov 2025 22:55:59 GMT',
+0|trading-bot  |     'x-xss-protection': '1; mode=block',
+0|trading-bot  |     server: 'nginx',
+0|trading-bot  |     'x-mbx-uuid': 'e4ee1ee6-c0a9-49f1-8d16-f310ee3fef96',
+0|trading-bot  |     'x-mbx-used-weight': '22',
+0|trading-bot  |     'x-mbx-used-weight-1m': '22',
+0|trading-bot  |     'cache-control': 'no-cache, no-store, must-revalidate',
+0|trading-bot  |     'content-security-policy': "default-src 'self'",
+0|trading-bot  |     expires: '0',
+0|trading-bot  |     pragma: 'no-cache',
+0|trading-bot  |     'strict-transport-security': 'max-age=31536000; includeSubdomains',
+0|trading-bot  |     'x-content-security-policy': "default-src 'self'",
+0|trading-bot  |     'x-content-type-options': 'nosniff',
+0|trading-bot  |     'x-frame-options': 'SAMEORIGIN',
+0|trading-bot  |     'x-webkit-csp': "default-src 'self'",
+0|trading-bot  |     'x-cache': 'Error from cloudfront',
+0|trading-bot  |     via: '1.1 e33a1931f45ba5c88d5bbeba53cbd6d6.cloudfront.net (CloudFront)',
+0|trading-bot  |     'x-amz-cf-pop': 'GRU3-P12',
+0|trading-bot  |     'x-amz-cf-id': 'rxGKBJLlo5vwi7E3YDjGoafB1TmL-LqfRstpO2TuDslukRqms5JLPw=='
+0|trading-bot  |   },
+0|trading-bot  |   requestUrl: 'https://testnet.binance.vision/api/v3/account?timestamp=1764543359804&recvWindow=5000&signature=a480e811fcd3c27ef8ffd24e3dead359fbd46975b6d6cf20feb381a067c0c40e',
+0|trading-bot  |   requestBody: undefined,
+0|trading-bot  |   requestOptions: {
+0|trading-bot  |     recvWindow: 5000,
+0|trading-bot  |     syncIntervalMs: 3600000,
+0|trading-bot  |     strictParamValidation: false,
+0|trading-bot  |     disableTimeSync: true,
+0|trading-bot  |     api_key: undefined,
+0|trading-bot  |     api_secret: undefined,
+0|trading-bot  |     testnet: true
+0|trading-bot  |   }
+0|trading-bot  | }
+0|trading-bot  | 10:56:00 PM [express] GET /api/binance/balance 500 in 309ms :: {"error":"Invalid API-key, IP, or permissions for action."}
+0|trading-bot  | 10:56:30 PM [express] GET /api/binance/status 304 in 405ms :: {"connected":true,"message":"Conexão estabelecida com sucesso","testnet":true}
+0|trading-bot  | 10:57:30 PM [express] GET /api/binance/status 304 in 399ms :: {"connected":true,"message":"Conexão estabelecida com sucesso","testnet":true}

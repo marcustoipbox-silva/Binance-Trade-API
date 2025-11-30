@@ -1,13 +1,13 @@
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ConnectionStatus } from "@/components/trading/ConnectionStatus";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 
 import Dashboard from "@/pages/Dashboard";
 import BotDetails from "@/pages/BotDetails";
@@ -28,8 +28,20 @@ function Router() {
   );
 }
 
-function App() {
-  const [isConnected, setIsConnected] = useState(false);
+interface ConnectionStatusResponse {
+  connected: boolean;
+  message?: string;
+  testnet?: boolean;
+  demo?: boolean;
+}
+
+function AppContent() {
+  const { data: connectionStatus } = useQuery<ConnectionStatusResponse>({
+    queryKey: ['/api/binance/status'],
+    refetchInterval: 30000,
+  });
+  
+  const isConnected = connectionStatus?.connected ?? false;
   
   useEffect(() => {
     document.documentElement.classList.add("dark");
@@ -41,39 +53,45 @@ function App() {
   };
 
   return (
+    <SidebarProvider style={style as React.CSSProperties}>
+      <div className="flex h-screen w-full bg-background">
+        <AppSidebar 
+          isConnected={isConnected} 
+          activeBots={2} 
+          totalBots={3}
+        />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <header className="flex items-center justify-between gap-4 px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <h2 className="text-sm font-medium text-muted-foreground hidden sm:block">
+                Sistema de Trading Automatizado
+              </h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <ConnectionStatus 
+                isConnected={isConnected}
+                onReconnect={() => {
+                  queryClient.invalidateQueries({ queryKey: ['/api/binance/status'] });
+                }}
+              />
+              <ThemeToggle />
+            </div>
+          </header>
+          <main className="flex-1 overflow-auto p-4 md:p-6">
+            <Router />
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <SidebarProvider style={style as React.CSSProperties}>
-          <div className="flex h-screen w-full bg-background">
-            <AppSidebar 
-              isConnected={isConnected} 
-              activeBots={2} 
-              totalBots={3}
-            />
-            <div className="flex flex-col flex-1 overflow-hidden">
-              <header className="flex items-center justify-between gap-4 px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="flex items-center gap-2">
-                  <SidebarTrigger data-testid="button-sidebar-toggle" />
-                  <h2 className="text-sm font-medium text-muted-foreground hidden sm:block">
-                    Sistema de Trading Automatizado
-                  </h2>
-                </div>
-                <div className="flex items-center gap-3">
-                  <ConnectionStatus 
-                    isConnected={isConnected}
-                    onReconnect={() => {
-                      setIsConnected(true);
-                    }}
-                  />
-                  <ThemeToggle />
-                </div>
-              </header>
-              <main className="flex-1 overflow-auto p-4 md:p-6">
-                <Router />
-              </main>
-            </div>
-          </div>
-        </SidebarProvider>
+        <AppContent />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
