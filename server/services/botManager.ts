@@ -94,12 +94,25 @@ export async function startBot(botId: string): Promise<Bot> {
 
   const updatedBot = await storage.updateBot(botId, { status: "active" });
   
+  await storage.addActivity({
+    botId,
+    botName: bot.name,
+    symbol: bot.symbol,
+    type: 'start',
+    message: 'Robô iniciado',
+    buySignals: 0,
+    sellSignals: 0,
+    indicators: [],
+  });
+  
   setTimeout(() => executeBotCycle(botId), 1000);
   
   return updatedBot!;
 }
 
 export async function pauseBot(botId: string): Promise<Bot> {
+  const bot = await storage.getBot(botId);
+  
   if (activeIntervals.has(botId)) {
     clearInterval(activeIntervals.get(botId)!);
     activeIntervals.delete(botId);
@@ -109,10 +122,26 @@ export async function pauseBot(botId: string): Promise<Bot> {
   if (!updatedBot) {
     throw new Error("Bot não encontrado");
   }
+  
+  if (bot) {
+    await storage.addActivity({
+      botId,
+      botName: bot.name,
+      symbol: bot.symbol,
+      type: 'stop',
+      message: 'Robô pausado',
+      buySignals: 0,
+      sellSignals: 0,
+      indicators: [],
+    });
+  }
+  
   return updatedBot;
 }
 
 export async function stopBot(botId: string): Promise<Bot> {
+  const bot = await storage.getBot(botId);
+  
   if (activeIntervals.has(botId)) {
     clearInterval(activeIntervals.get(botId)!);
     activeIntervals.delete(botId);
@@ -126,6 +155,20 @@ export async function stopBot(botId: string): Promise<Bot> {
   if (!updatedBot) {
     throw new Error("Bot não encontrado");
   }
+  
+  if (bot) {
+    await storage.addActivity({
+      botId,
+      botName: bot.name,
+      symbol: bot.symbol,
+      type: 'stop',
+      message: 'Robô parado',
+      buySignals: 0,
+      sellSignals: 0,
+      indicators: [],
+    });
+  }
+  
   return updatedBot;
 }
 
@@ -151,6 +194,16 @@ async function executeBotCycle(botId: string): Promise<void> {
     
     if (candles.length < 30) {
       console.log(`[Bot ${bot.name}] Not enough candle data`);
+      await storage.addActivity({
+        botId,
+        botName: bot.name,
+        symbol: bot.symbol,
+        type: 'error',
+        message: 'Dados insuficientes para análise',
+        buySignals: 0,
+        sellSignals: 0,
+        indicators: [],
+      });
       return;
     }
 
@@ -158,6 +211,21 @@ async function executeBotCycle(botId: string): Promise<void> {
     const analysis = analyzeIndicators(candles, indicators);
     
     console.log(`[Bot ${bot.name}] Analysis: ${analysis.overallSignal} (Buy: ${analysis.buyCount}, Sell: ${analysis.sellCount})`);
+
+    const activeIndicatorNames = analysis.signals.map(s => `${s.name}: ${s.signal}`);
+    
+    await storage.addActivity({
+      botId,
+      botName: bot.name,
+      symbol: bot.symbol,
+      type: 'analysis',
+      message: analysis.overallSignal === 'hold' 
+        ? `Aguardando sinais (${bot.minSignals} necessários)`
+        : `Sinal detectado: ${analysis.overallSignal.toUpperCase()}`,
+      buySignals: analysis.buyCount,
+      sellSignals: analysis.sellCount,
+      indicators: activeIndicatorNames,
+    });
 
     const signalMap: Record<string, string> = {
       buy: "buy",

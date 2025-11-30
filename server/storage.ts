@@ -1,4 +1,4 @@
-import type { InsertUser, User, Bot, InsertBot, Trade, InsertTrade } from "@shared/schema";
+import type { InsertUser, User, Bot, InsertBot, Trade, InsertTrade, BotActivity } from "@shared/schema";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -15,12 +15,18 @@ export interface IStorage {
   getTrade(id: string): Promise<Trade | undefined>;
   createTrade(trade: InsertTrade): Promise<Trade>;
   getOpenPosition(botId: string): Promise<Trade | undefined>;
+  
+  getActivities(limit?: number): Promise<BotActivity[]>;
+  addActivity(activity: Omit<BotActivity, 'id' | 'timestamp'>): Promise<BotActivity>;
+  clearActivities(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User> = new Map();
   private bots: Map<string, Bot> = new Map();
   private trades: Map<string, Trade> = new Map();
+  private activities: BotActivity[] = [];
+  private maxActivities = 100;
 
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
@@ -149,6 +155,30 @@ export class MemStorage implements IStorage {
       return lastTrade;
     }
     return undefined;
+  }
+
+  async getActivities(limit: number = 50): Promise<BotActivity[]> {
+    return this.activities.slice(0, limit);
+  }
+
+  async addActivity(activity: Omit<BotActivity, 'id' | 'timestamp'>): Promise<BotActivity> {
+    const newActivity: BotActivity = {
+      ...activity,
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+    };
+    
+    this.activities.unshift(newActivity);
+    
+    if (this.activities.length > this.maxActivities) {
+      this.activities = this.activities.slice(0, this.maxActivities);
+    }
+    
+    return newActivity;
+  }
+
+  async clearActivities(): Promise<void> {
+    this.activities = [];
   }
 }
 

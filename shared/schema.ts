@@ -162,3 +162,16 @@ export interface BotWithStats extends Bot {
   avgProfit: number;
   activeIndicators: string[];
 }
+
+export interface BotActivity {
+  id: string;
+  botId: string;
+  botName: string;
+  symbol: string;
+  type: 'analysis' | 'buy' | 'sell' | 'start' | 'stop' | 'error';
+  message: string;
+  buySignals: number;
+  sellSignals: number;
+  indicators: string[];
+  timestamp: Date;
+}
