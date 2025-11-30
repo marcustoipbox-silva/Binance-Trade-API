@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/bot/StatsCard";
 import { BotStatusCard } from "@/components/bot/BotStatusCard";
 import { TradeLog } from "@/components/bot/TradeLog";
+import { BalancePanel } from "@/components/bot/BalancePanel";
+import { ActivityLog } from "@/components/bot/ActivityLog";
 import { CreateBotModal } from "@/components/bot/CreateBotModal";
 import { EditBotModal } from "@/components/bot/EditBotModal";
 import { useToast } from "@/hooks/use-toast";
@@ -224,8 +226,19 @@ export default function Dashboard() {
           )}
         </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <h2 className="text-lg font-semibold mb-4">Operações Executadas</h2>
+            <ActivityLog maxItems={15} />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Saldo Testnet</h2>
+            <BalancePanel />
+          </div>
+        </div>
+
         <div>
-          <h2 className="text-lg font-semibold mb-4">Operações Recentes</h2>
+          <h2 className="text-lg font-semibold mb-4">Histórico Completo</h2>
           <TradeLog 
             trades={(stats?.recentTrades || []).map(t => ({
               id: t.id,
