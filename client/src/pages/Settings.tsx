@@ -8,14 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiKeyConfig } from "@/components/bot/ApiKeyConfig";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Settings as SettingsIcon, 
   Bell, 
   Shield, 
   Palette,
   Globe,
-  Save
+  Save,
+  Wallet,
+  Loader2
 } from "lucide-react";
+import type { AccountBalance } from "@shared/schema";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -29,6 +33,17 @@ export default function Settings() {
     maxDailyLoss: 500,
     maxPositionSize: 1000,
     emergencyStop: true,
+  });
+
+  const { data: connectionStatus } = useQuery<{ connected: boolean }>({
+    queryKey: ["/api/binance/status"],
+    refetchInterval: 30000,
+  });
+
+  const { data: balances, isLoading: balancesLoading } = useQuery<AccountBalance[]>({
+    queryKey: ["/api/binance/balance"],
+    enabled: !!connectionStatus?.connected,
+    refetchInterval: 60000,
   });
 
   const handleSave = () => {
@@ -68,16 +83,46 @@ export default function Settings() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="api" className="mt-6">
-          <ApiKeyConfig
-            hasKeys={false}
-            isConnected={false}
-            onSaveKeys={(apiKey, secretKey) => {
-              console.log("Salvar:", { apiKey, secretKey });
-              toast({ title: "Chaves salvas", description: "API keys configuradas com sucesso." });
-            }}
-            onTestConnection={() => console.log("Testar conexão")}
-          />
+        <TabsContent value="api" className="mt-6 space-y-6">
+          <ApiKeyConfig />
+
+          {connectionStatus?.connected && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Wallet className="h-4 w-4" />
+                  Saldo da Conta
+                </CardTitle>
+                <CardDescription>Seus ativos disponíveis na Binance</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {balancesLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : balances && balances.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {balances.slice(0, 9).map((balance) => (
+                      <div 
+                        key={balance.asset} 
+                        className="p-3 rounded-lg bg-muted/50"
+                        data-testid={`balance-${balance.asset}`}
+                      >
+                        <p className="font-medium">{balance.asset}</p>
+                        <p className="text-sm text-muted-foreground font-mono">
+                          {balance.free.toFixed(8)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum ativo encontrado
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="notifications" className="mt-6">
