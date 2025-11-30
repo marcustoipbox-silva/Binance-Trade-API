@@ -39,6 +39,7 @@ interface BotConfig {
   takeProfit: number;
   indicators: IndicatorSettings;
   minSignals: number;
+  interval: string;
 }
 
 const defaultIndicators: IndicatorSettings = {
@@ -67,6 +68,7 @@ export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
     takeProfit: 10,
     indicators: defaultIndicators,
     minSignals: 2,
+    interval: "1h",
   });
 
   const { data: bot, isLoading: botLoading } = useQuery<BotWithStats>({
@@ -84,6 +86,7 @@ export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
         takeProfit: bot.takeProfit,
         indicators: bot.indicators as IndicatorSettings || defaultIndicators,
         minSignals: bot.minSignals,
+        interval: bot.interval || "1h",
       });
     }
   }, [bot]);
@@ -157,6 +160,7 @@ export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
         takeProfit: config.takeProfit,
         indicators: config.indicators,
         minSignals: config.minSignals,
+        interval: config.interval,
       });
     }
   };
@@ -291,6 +295,30 @@ export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label>Intervalo de Análise</Label>
+                <Select 
+                  value={config.interval} 
+                  onValueChange={(v) => setConfig({ ...config, interval: v })}
+                >
+                  <SelectTrigger data-testid="select-edit-interval">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1m">1 minuto (muito rápido)</SelectItem>
+                    <SelectItem value="5m">5 minutos (rápido)</SelectItem>
+                    <SelectItem value="15m">15 minutos (moderado)</SelectItem>
+                    <SelectItem value="30m">30 minutos</SelectItem>
+                    <SelectItem value="1h">1 hora (recomendado)</SelectItem>
+                    <SelectItem value="4h">4 horas (lento)</SelectItem>
+                    <SelectItem value="1d">1 dia (muito lento)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Com que frequência o robô irá analisar o mercado e tomar decisões
+                </p>
+              </div>
+
               <div className="flex justify-end">
                 <Button onClick={() => setStep("indicators")} data-testid="button-edit-next-indicators">
                   Próximo: Indicadores
@@ -386,11 +414,21 @@ export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
                   <div><span className="text-muted-foreground">Nome:</span> {config.name || "-"}</div>
                   <div><span className="text-muted-foreground">Par:</span> {config.symbol}</div>
                   <div><span className="text-muted-foreground">Investimento:</span> ${config.investment}</div>
+                  <div><span className="text-muted-foreground">Intervalo:</span> {config.interval}</div>
                   <div><span className="text-muted-foreground">Stop Loss:</span> {config.stopLoss}%</div>
                   <div><span className="text-muted-foreground">Take Profit:</span> {config.takeProfit}%</div>
                   <div><span className="text-muted-foreground">Indicadores:</span> {enabledIndicatorsCount} ativos</div>
+                  <div><span className="text-muted-foreground">Sinais Mínimos:</span> {config.minSignals}</div>
                 </div>
               </div>
+
+              {bot?.status === 'active' && (
+                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <p className="text-xs text-yellow-500">
+                    ⚠️ As alterações serão aplicadas imediatamente. Se o intervalo foi alterado, o robô usará a nova frequência no próximo ciclo.
+                  </p>
+                </div>
+              )}
 
               <div className="flex justify-between">
                 <Button variant="outline" onClick={() => setStep("indicators")} data-testid="button-edit-back-indicators">
