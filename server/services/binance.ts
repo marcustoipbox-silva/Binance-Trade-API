@@ -287,3 +287,78 @@ export function formatQuantity(quantity: number, stepSize: number): number {
   const precision = Math.max(0, Math.ceil(-Math.log10(stepSize)));
   return Math.floor(quantity * Math.pow(10, precision)) / Math.pow(10, precision);
 }
+
+let cachedSymbols: { symbol: string; baseAsset: string; quoteAsset: string }[] = [];
+let symbolsCacheTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000;
+
+export async function getAvailableSymbols(search?: string): Promise<{ symbol: string; formatted: string }[]> {
+  const now = Date.now();
+  
+  if (cachedSymbols.length === 0 || now - symbolsCacheTime > CACHE_DURATION) {
+    try {
+      if (!mainClient) {
+        return getDefaultSymbols(search);
+      }
+      
+      const info = await mainClient.getExchangeInfo();
+      cachedSymbols = info.symbols
+        .filter((s: any) => s.status === "TRADING" && s.quoteAsset === "USDT")
+        .map((s: any) => ({
+          symbol: s.symbol,
+          baseAsset: s.baseAsset,
+          quoteAsset: s.quoteAsset,
+        }));
+      symbolsCacheTime = now;
+    } catch (error) {
+      console.error("Error fetching symbols:", error);
+      return getDefaultSymbols(search);
+    }
+  }
+  
+  let symbols = cachedSymbols;
+  
+  if (search && search.trim()) {
+    const searchUpper = search.toUpperCase().trim();
+    symbols = symbols.filter(
+      (s) => s.baseAsset.includes(searchUpper) || s.symbol.includes(searchUpper)
+    );
+  }
+  
+  return symbols.slice(0, 50).map((s) => ({
+    symbol: s.symbol,
+    formatted: `${s.baseAsset}/${s.quoteAsset}`,
+  }));
+}
+
+function getDefaultSymbols(search?: string): { symbol: string; formatted: string }[] {
+  const defaultPairs = [
+    { symbol: "BTCUSDT", formatted: "BTC/USDT" },
+    { symbol: "ETHUSDT", formatted: "ETH/USDT" },
+    { symbol: "BNBUSDT", formatted: "BNB/USDT" },
+    { symbol: "SOLUSDT", formatted: "SOL/USDT" },
+    { symbol: "XRPUSDT", formatted: "XRP/USDT" },
+    { symbol: "ADAUSDT", formatted: "ADA/USDT" },
+    { symbol: "DOGEUSDT", formatted: "DOGE/USDT" },
+    { symbol: "AVAXUSDT", formatted: "AVAX/USDT" },
+    { symbol: "DOTUSDT", formatted: "DOT/USDT" },
+    { symbol: "MATICUSDT", formatted: "MATIC/USDT" },
+    { symbol: "LINKUSDT", formatted: "LINK/USDT" },
+    { symbol: "LTCUSDT", formatted: "LTC/USDT" },
+    { symbol: "UNIUSDT", formatted: "UNI/USDT" },
+    { symbol: "ATOMUSDT", formatted: "ATOM/USDT" },
+    { symbol: "ETCUSDT", formatted: "ETC/USDT" },
+    { symbol: "XLMUSDT", formatted: "XLM/USDT" },
+    { symbol: "FILUSDT", formatted: "FIL/USDT" },
+    { symbol: "TRXUSDT", formatted: "TRX/USDT" },
+    { symbol: "NEARUSDT", formatted: "NEAR/USDT" },
+    { symbol: "ALGOUSDT", formatted: "ALGO/USDT" },
+  ];
+  
+  if (search && search.trim()) {
+    const searchUpper = search.toUpperCase().trim();
+    return defaultPairs.filter((p) => p.formatted.includes(searchUpper));
+  }
+  
+  return defaultPairs;
+}
