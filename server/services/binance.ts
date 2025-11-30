@@ -3,6 +3,15 @@ import type { Candle, MarketData, AccountBalance } from "@shared/schema";
 
 let mainClient: MainClient | null = null;
 let wsClient: WebsocketClient | null = null;
+let demoMode = false;
+
+export function setDemoMode(enabled: boolean): void {
+  demoMode = enabled;
+}
+
+export function isDemoMode(): boolean {
+  return demoMode;
+}
 
 interface BinanceConfig {
   apiKey: string;
