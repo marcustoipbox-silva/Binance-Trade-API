@@ -234,6 +234,16 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     }
   });
 
+  app.get("/api/binance/symbols", async (req, res) => {
+    try {
+      const { search } = req.query;
+      const symbols = await binance.getAvailableSymbols(search as string | undefined);
+      res.json(symbols);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/stats", async (req, res) => {
     try {
       const bots = await botManager.getAllBotsWithStats();

@@ -1,12 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { IndicatorConfig, IndicatorSettings } from "./IndicatorConfig";
-import { Bot, Plus, TrendingUp } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Bot, Plus, TrendingUp, ChevronsUpDown, Check, Search, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface CreateBotModalProps {
   open: boolean;
@@ -31,13 +35,15 @@ const defaultIndicators: IndicatorSettings = {
   ema: { enabled: true, shortPeriod: 12, longPeriod: 26 },
 };
 
-const tradingPairs = [
-  "BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "XRP/USDT",
-  "ADA/USDT", "DOGE/USDT", "AVAX/USDT", "DOT/USDT", "MATIC/USDT"
-];
+interface TradingPair {
+  symbol: string;
+  formatted: string;
+}
 
 export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotModalProps) {
   const [step, setStep] = useState<"basic" | "indicators" | "risk">("basic");
+  const [symbolSearch, setSymbolSearch] = useState("");
+  const [symbolPopoverOpen, setSymbolPopoverOpen] = useState(false);
   const [config, setConfig] = useState<BotConfig>({
     name: "",
     symbol: "BTC/USDT",
@@ -47,6 +53,24 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
     indicators: defaultIndicators,
     minSignals: 2,
   });
+
+  const symbolsQueryKey = symbolSearch.trim() 
+    ? `/api/binance/symbols?search=${encodeURIComponent(symbolSearch.trim())}`
+    : "/api/binance/symbols";
+    
+  const { data: symbols = [], isLoading: symbolsLoading } = useQuery<TradingPair[]>({
+    queryKey: [symbolsQueryKey],
+    enabled: open,
+  });
+
+  const filteredSymbols = useMemo(() => {
+    if (!symbolSearch.trim()) return symbols;
+    const search = symbolSearch.toUpperCase();
+    return symbols.filter(s => 
+      s.formatted.toUpperCase().includes(search) || 
+      s.symbol.toUpperCase().includes(search)
+    );
+  }, [symbols, symbolSearch]);
 
   const enabledIndicatorsCount = [
     config.indicators.rsi.enabled,
@@ -73,7 +97,14 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
         minSignals: 2,
       });
       setStep("basic");
+      setSymbolSearch("");
     }
+  };
+
+  const handleSymbolSelect = (pair: TradingPair) => {
+    setConfig({ ...config, symbol: pair.formatted });
+    setSymbolPopoverOpen(false);
+    setSymbolSearch("");
   };
 
   return (
@@ -116,19 +147,67 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
 
             <div className="space-y-2">
               <Label>Par de Trading</Label>
-              <Select 
-                value={config.symbol} 
-                onValueChange={(v) => setConfig({ ...config, symbol: v })}
-              >
-                <SelectTrigger data-testid="select-symbol">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {tradingPairs.map((pair) => (
-                    <SelectItem key={pair} value={pair}>{pair}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={symbolPopoverOpen} onOpenChange={setSymbolPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={symbolPopoverOpen}
+                    className="w-full justify-between font-mono"
+                    data-testid="select-symbol"
+                  >
+                    {config.symbol}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command shouldFilter={false}>
+                    <div className="flex items-center border-b px-3">
+                      <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                      <input
+                        placeholder="Buscar par de trading..."
+                        value={symbolSearch}
+                        onChange={(e) => setSymbolSearch(e.target.value)}
+                        className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        data-testid="input-symbol-search"
+                      />
+                    </div>
+                    <CommandList>
+                      {symbolsLoading ? (
+                        <div className="flex items-center justify-center py-6">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="ml-2 text-sm text-muted-foreground">Carregando...</span>
+                        </div>
+                      ) : filteredSymbols.length === 0 ? (
+                        <CommandEmpty>Nenhum par encontrado.</CommandEmpty>
+                      ) : (
+                        <CommandGroup className="max-h-64 overflow-auto">
+                          {filteredSymbols.map((pair) => (
+                            <CommandItem
+                              key={pair.symbol}
+                              value={pair.symbol}
+                              onSelect={() => handleSymbolSelect(pair)}
+                              className="cursor-pointer"
+                              data-testid={`symbol-option-${pair.symbol}`}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  config.symbol === pair.formatted ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <span className="font-mono">{pair.formatted}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                Digite para buscar entre todos os pares disponíveis na Binance
+              </p>
             </div>
 
             <div className="space-y-2">
