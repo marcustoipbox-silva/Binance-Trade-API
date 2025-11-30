@@ -293,42 +293,7 @@ let symbolsCacheTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000;
 
 export async function getAvailableSymbols(search?: string): Promise<{ symbol: string; formatted: string }[]> {
-  const now = Date.now();
-  
-  if (cachedSymbols.length === 0 || now - symbolsCacheTime > CACHE_DURATION) {
-    try {
-      if (!mainClient) {
-        return getDefaultSymbols(search);
-      }
-      
-      const info = await mainClient.getExchangeInfo();
-      cachedSymbols = info.symbols
-        .filter((s: any) => s.status === "TRADING" && s.quoteAsset === "USDT")
-        .map((s: any) => ({
-          symbol: s.symbol,
-          baseAsset: s.baseAsset,
-          quoteAsset: s.quoteAsset,
-        }));
-      symbolsCacheTime = now;
-    } catch (error) {
-      console.error("Error fetching symbols:", error);
-      return getDefaultSymbols(search);
-    }
-  }
-  
-  let symbols = cachedSymbols;
-  
-  if (search && search.trim()) {
-    const searchUpper = search.toUpperCase().trim();
-    symbols = symbols.filter(
-      (s) => s.baseAsset.includes(searchUpper) || s.symbol.includes(searchUpper)
-    );
-  }
-  
-  return symbols.slice(0, 50).map((s) => ({
-    symbol: s.symbol,
-    formatted: `${s.baseAsset}/${s.quoteAsset}`,
-  }));
+  return getDefaultSymbols(search);
 }
 
 function getDefaultSymbols(search?: string): { symbol: string; formatted: string }[] {
@@ -353,11 +318,44 @@ function getDefaultSymbols(search?: string): { symbol: string; formatted: string
     { symbol: "TRXUSDT", formatted: "TRX/USDT" },
     { symbol: "NEARUSDT", formatted: "NEAR/USDT" },
     { symbol: "ALGOUSDT", formatted: "ALGO/USDT" },
+    { symbol: "SHIBUSDT", formatted: "SHIB/USDT" },
+    { symbol: "APTUSDT", formatted: "APT/USDT" },
+    { symbol: "ARBUSDT", formatted: "ARB/USDT" },
+    { symbol: "OPUSDT", formatted: "OP/USDT" },
+    { symbol: "INJUSDT", formatted: "INJ/USDT" },
+    { symbol: "SUIUSDT", formatted: "SUI/USDT" },
+    { symbol: "SEIUSDT", formatted: "SEI/USDT" },
+    { symbol: "TIAUSDT", formatted: "TIA/USDT" },
+    { symbol: "AAVEUSDT", formatted: "AAVE/USDT" },
+    { symbol: "LDOUSDT", formatted: "LDO/USDT" },
+    { symbol: "MKRUSDT", formatted: "MKR/USDT" },
+    { symbol: "CRVUSDT", formatted: "CRV/USDT" },
+    { symbol: "SNXUSDT", formatted: "SNX/USDT" },
+    { symbol: "COMPUSDT", formatted: "COMP/USDT" },
+    { symbol: "GMXUSDT", formatted: "GMX/USDT" },
+    { symbol: "RNDRUSDT", formatted: "RNDR/USDT" },
+    { symbol: "FETUSDT", formatted: "FET/USDT" },
+    { symbol: "AGIXUSDT", formatted: "AGIX/USDT" },
+    { symbol: "OCEANUSDT", formatted: "OCEAN/USDT" },
+    { symbol: "WLDUSDT", formatted: "WLD/USDT" },
+    { symbol: "PEPEUSDT", formatted: "PEPE/USDT" },
+    { symbol: "FLOKIUSDT", formatted: "FLOKI/USDT" },
+    { symbol: "BONKUSDT", formatted: "BONK/USDT" },
+    { symbol: "WIFUSDT", formatted: "WIF/USDT" },
+    { symbol: "JUPUSDT", formatted: "JUP/USDT" },
+    { symbol: "PYTHUSDT", formatted: "PYTH/USDT" },
+    { symbol: "JTOUSDT", formatted: "JTO/USDT" },
+    { symbol: "STXUSDT", formatted: "STX/USDT" },
+    { symbol: "ORDIUSDT", formatted: "ORDI/USDT" },
+    { symbol: "SATSUSDT", formatted: "SATS/USDT" },
   ];
   
   if (search && search.trim()) {
     const searchUpper = search.toUpperCase().trim();
-    return defaultPairs.filter((p) => p.formatted.includes(searchUpper));
+    return defaultPairs.filter((p) => 
+      p.formatted.toUpperCase().includes(searchUpper) || 
+      p.symbol.includes(searchUpper)
+    );
   }
   
   return defaultPairs;
