@@ -20,6 +20,16 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     }
   });
 
+  app.post("/api/binance/disable-demo", async (req, res) => {
+    try {
+      demoModeEnabled = false;
+      binance.setDemoMode(false);
+      res.json({ success: true, message: "Modo demo desativado com sucesso" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/binance/connect", async (req, res) => {
     try {
       const { apiKey, secretKey } = req.body;
