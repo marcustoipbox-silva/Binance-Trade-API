@@ -62,6 +62,13 @@ export function isConnected(): boolean {
   return mainClient !== null;
 }
 
+export function disconnect(): void {
+  mainClient = null;
+  wsClient = null;
+  testnetMode = false;
+  demoMode = false;
+}
+
 export function getMainClient(): MainClient | null {
   return mainClient;
 }

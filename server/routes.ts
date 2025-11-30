@@ -31,6 +31,18 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     }
   });
 
+  app.post("/api/binance/disconnect", async (req, res) => {
+    try {
+      binance.disconnect();
+      apiKeys = null;
+      testnetEnabled = false;
+      demoModeEnabled = false;
+      res.json({ success: true, message: "Desconectado com sucesso" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/binance/connect", async (req, res) => {
     try {
       const { apiKey, secretKey, testnet = false } = req.body;
