@@ -7,6 +7,7 @@ import { botConfigSchema, indicatorSettingsSchema } from "@shared/schema";
 
 let apiKeys: { apiKey: string; secretKey: string } | null = null;
 let demoModeEnabled = false;
+let testnetEnabled = false;
 
 export async function registerRoutes(server: Server, app: Express): Promise<void> {
   
@@ -32,13 +33,13 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
 
   app.post("/api/binance/connect", async (req, res) => {
     try {
-      const { apiKey, secretKey } = req.body;
+      const { apiKey, secretKey, testnet = false } = req.body;
       
       if (!apiKey || !secretKey) {
         return res.status(400).json({ error: "API key e secret key são obrigatórios" });
       }
       
-      const success = binance.initializeBinanceClient({ apiKey, secretKey });
+      const success = binance.initializeBinanceClient({ apiKey, secretKey, testnet });
       if (!success) {
         return res.status(500).json({ error: "Falha ao inicializar cliente Binance" });
       }
@@ -49,8 +50,11 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       }
       
       apiKeys = { apiKey, secretKey };
+      testnetEnabled = testnet;
+      demoModeEnabled = false;
       
-      res.json({ success: true, message: "Conexão estabelecida com sucesso" });
+      const modeMsg = testnet ? " (Modo Testnet)" : "";
+      res.json({ success: true, message: `Conexão estabelecida com sucesso${modeMsg}` });
     } catch (error: any) {
       res.status(500).json({ error: error.message || "Erro ao conectar" });
     }
@@ -68,7 +72,11 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       }
       
       const testResult = await binance.testConnection();
-      res.json({ connected: testResult.success, message: testResult.message });
+      res.json({ 
+        connected: testResult.success, 
+        message: testResult.message,
+        testnet: testnetEnabled 
+      });
     } catch (error: any) {
       res.json({ connected: false, error: error.message });
     }

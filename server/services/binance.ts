@@ -40,7 +40,7 @@ export function initializeBinanceClient(config: BinanceConfig): boolean {
     mainClient = new MainClient({
       api_key: config.apiKey,
       api_secret: config.secretKey,
-      useTestnet: useTestnet,
+      testnet: useTestnet,
     });
     
     wsClient = new WebsocketClient({
