@@ -337,6 +337,7 @@ function getDefaultSymbols(search?: string): { symbol: string; formatted: string
     { symbol: "TIAUSDT", formatted: "TIA/USDT" },
     { symbol: "AAVEUSDT", formatted: "AAVE/USDT" },
     { symbol: "LDOUSDT", formatted: "LDO/USDT" },
+    { symbol: "PENDLEUSDT", formatted: "PENDLE/USDT" },
     { symbol: "MKRUSDT", formatted: "MKR/USDT" },
     { symbol: "CRVUSDT", formatted: "CRV/USDT" },
     { symbol: "SNXUSDT", formatted: "SNX/USDT" },
