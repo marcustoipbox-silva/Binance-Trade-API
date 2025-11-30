@@ -1,14 +1,13 @@
 import type { Express } from "express";
+import type { Server } from "http";
 import { storage } from "./storage";
 import * as binance from "./services/binance";
 import * as botManager from "./services/botManager";
-import { analyzeIndicators } from "./services/indicators";
 import { botConfigSchema, indicatorSettingsSchema } from "@shared/schema";
-import { z } from "zod";
 
 let apiKeys: { apiKey: string; secretKey: string } | null = null;
 
-export async function registerRoutes(app: Express): Promise<void> {
+export async function registerRoutes(server: Server, app: Express): Promise<void> {
   
   app.post("/api/binance/connect", async (req, res) => {
     try {

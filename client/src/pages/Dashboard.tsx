@@ -1,96 +1,112 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/bot/StatsCard";
-import { BotStatusCard, Bot } from "@/components/bot/BotStatusCard";
-import { TradeLog, Trade } from "@/components/bot/TradeLog";
+import { BotStatusCard } from "@/components/bot/BotStatusCard";
+import { TradeLog } from "@/components/bot/TradeLog";
 import { CreateBotModal } from "@/components/bot/CreateBotModal";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   DollarSign, 
   TrendingUp, 
   Bot as BotIcon, 
   BarChart3,
-  Plus
+  Plus,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Link } from "wouter";
+import type { BotWithStats, Trade } from "@shared/schema";
 
-// todo: remove mock functionality
-const mockBots: Bot[] = [
-  {
-    id: "bot-1",
-    name: "BTC Scalper Pro",
-    symbol: "BTC/USDT",
-    status: "active",
-    pnl: 1234.56,
-    pnlPercent: 12.34,
-    totalTrades: 156,
-    winRate: 68.5,
-    avgProfit: 2.3,
-    activeIndicators: ["RSI", "MACD", "EMA"],
-    lastSignal: "buy",
-    lastSignalTime: "há 5 min"
-  },
-  {
-    id: "bot-2",
-    name: "ETH Swing Trader",
-    symbol: "ETH/USDT",
-    status: "paused",
-    pnl: 456.78,
-    pnlPercent: 4.56,
-    totalTrades: 45,
-    winRate: 62.2,
-    avgProfit: 1.8,
-    activeIndicators: ["MACD", "Bollinger"],
-    lastSignal: "hold",
-    lastSignalTime: "há 2h"
-  },
-  {
-    id: "bot-3",
-    name: "SOL DCA Bot",
-    symbol: "SOL/USDT",
-    status: "active",
-    pnl: -123.45,
-    pnlPercent: -2.1,
-    totalTrades: 89,
-    winRate: 55.1,
-    avgProfit: -0.5,
-    activeIndicators: ["RSI", "EMA"],
-    lastSignal: "sell",
-    lastSignalTime: "há 15 min"
-  }
-];
-
-const mockTrades: Trade[] = [
-  { id: "1", timestamp: "2024-01-15 14:32:15", symbol: "BTC/USDT", side: "buy", price: 97234.50, amount: 0.0052, total: 505.62, indicators: ["RSI", "MACD"], status: "completed" },
-  { id: "2", timestamp: "2024-01-15 15:45:22", symbol: "BTC/USDT", side: "sell", price: 97856.00, amount: 0.0052, total: 508.85, pnl: 3.23, pnlPercent: 0.64, indicators: ["RSI"], status: "completed" },
-  { id: "3", timestamp: "2024-01-15 16:12:08", symbol: "ETH/USDT", side: "buy", price: 3456.00, amount: 0.15, total: 518.40, indicators: ["MACD", "EMA"], status: "completed" },
-  { id: "4", timestamp: "2024-01-15 17:28:45", symbol: "SOL/USDT", side: "sell", price: 52.34, amount: 10, total: 523.40, pnl: -12.50, pnlPercent: -2.33, indicators: ["Bollinger"], status: "completed" },
-];
+interface Stats {
+  totalPnl: number;
+  pnlPercent: number;
+  activeBots: number;
+  totalBots: number;
+  totalTrades: number;
+  avgWinRate: number;
+  recentTrades: Trade[];
+}
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const [bots, setBots] = useState(mockBots);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  const totalPnl = bots.reduce((sum, b) => sum + b.pnl, 0);
-  const activeBots = bots.filter(b => b.status === "active").length;
-  const avgWinRate = bots.reduce((sum, b) => sum + b.winRate, 0) / bots.length;
-  const totalTrades = bots.reduce((sum, b) => sum + b.totalTrades, 0);
+  const { data: connectionStatus } = useQuery<{ connected: boolean; message?: string }>({
+    queryKey: ["/api/binance/status"],
+    refetchInterval: 30000,
+  });
 
-  const handleBotAction = (action: string, id: string) => {
-    toast({
-      title: `Robô ${action}`,
-      description: `Ação executada com sucesso no robô ${id}`,
-    });
-    
-    if (action === "iniciado") {
-      setBots(bots.map(b => b.id === id ? { ...b, status: "active" as const } : b));
-    } else if (action === "pausado") {
-      setBots(bots.map(b => b.id === id ? { ...b, status: "paused" as const } : b));
-    } else if (action === "parado") {
-      setBots(bots.map(b => b.id === id ? { ...b, status: "stopped" as const } : b));
-    }
-  };
+  const { data: stats, isLoading: statsLoading } = useQuery<Stats>({
+    queryKey: ["/api/stats"],
+    refetchInterval: 10000,
+  });
+
+  const { data: bots = [], isLoading: botsLoading } = useQuery<BotWithStats[]>({
+    queryKey: ["/api/bots"],
+    refetchInterval: 5000,
+  });
+
+  const startBotMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/bots/${id}/start`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({ title: "Robô iniciado", description: "O robô começou a operar." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const pauseBotMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/bots/${id}/pause`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({ title: "Robô pausado", description: "O robô foi pausado." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const stopBotMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/bots/${id}/stop`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({ title: "Robô parado", description: "O robô foi parado." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const createBotMutation = useMutation({
+    mutationFn: async (config: any) => {
+      return apiRequest("POST", "/api/bots", config);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({ title: "Robô criado!", description: "O robô foi criado com sucesso." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro ao criar robô", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const isLoading = statsLoading || botsLoading;
 
   return (
     <TooltipProvider>
@@ -100,41 +116,53 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold" data-testid="text-dashboard-title">Painel de Controle</h1>
             <p className="text-sm text-muted-foreground">Gerencie seus robôs de trading automatizado</p>
           </div>
-          <Button onClick={() => setCreateModalOpen(true)} data-testid="button-create-bot">
+          <Button 
+            onClick={() => setCreateModalOpen(true)} 
+            data-testid="button-create-bot"
+            disabled={!connectionStatus?.connected}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Novo Robô
           </Button>
         </div>
 
+        {!connectionStatus?.connected && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between gap-4 flex-wrap">
+              <span>API Binance não conectada. Configure suas chaves de API para começar a operar.</span>
+              <Link href="/settings">
+                <Button variant="outline" size="sm">Configurar API</Button>
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatsCard
             title="Lucro Total"
-            value={totalPnl.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })}
-            change={totalPnl > 0 ? 15.3 : -5.2}
-            changeLabel="este mês"
+            value={isLoading ? "..." : (stats?.totalPnl || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })}
+            change={stats?.pnlPercent || 0}
+            changeLabel="total"
             icon={DollarSign}
-            trend={totalPnl >= 0 ? "up" : "down"}
+            trend={(stats?.totalPnl || 0) >= 0 ? "up" : "down"}
           />
           <StatsCard
             title="Robôs Ativos"
-            value={`${activeBots}/${bots.length}`}
+            value={isLoading ? "..." : `${stats?.activeBots || 0}/${stats?.totalBots || 0}`}
             icon={BotIcon}
             iconColor="text-primary"
             trend="neutral"
           />
           <StatsCard
             title="Win Rate Médio"
-            value={`${avgWinRate.toFixed(1)}%`}
-            change={2.1}
-            changeLabel="vs semana"
+            value={isLoading ? "..." : `${(stats?.avgWinRate || 0).toFixed(1)}%`}
             icon={BarChart3}
             trend="up"
           />
           <StatsCard
             title="Total de Trades"
-            value={totalTrades.toString()}
-            change={12}
-            changeLabel="hoje"
+            value={isLoading ? "..." : (stats?.totalTrades || 0).toString()}
             icon={TrendingUp}
             trend="up"
           />
@@ -142,24 +170,61 @@ export default function Dashboard() {
 
         <div>
           <h2 className="text-lg font-semibold mb-4">Meus Robôs</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {bots.map((bot) => (
-              <BotStatusCard
-                key={bot.id}
-                bot={bot}
-                onStart={(id) => handleBotAction("iniciado", id)}
-                onPause={(id) => handleBotAction("pausado", id)}
-                onStop={(id) => handleBotAction("parado", id)}
-                onConfigure={(id) => toast({ title: "Configurar", description: `Abrindo configurações do robô ${id}` })}
-              />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : bots.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <BotIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhum robô criado ainda.</p>
+              <p className="text-sm">Clique em "Novo Robô" para começar.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {bots.map((bot) => (
+                <BotStatusCard
+                  key={bot.id}
+                  bot={{
+                    id: bot.id,
+                    name: bot.name,
+                    symbol: bot.symbol,
+                    status: bot.status as "active" | "paused" | "stopped",
+                    pnl: bot.totalPnl,
+                    pnlPercent: bot.pnlPercent,
+                    totalTrades: bot.totalTrades,
+                    winRate: bot.winRate,
+                    avgProfit: bot.avgProfit,
+                    activeIndicators: bot.activeIndicators,
+                    lastSignal: bot.lastSignal as "buy" | "sell" | "hold" | undefined,
+                    lastSignalTime: bot.lastSignalTime ? new Date(bot.lastSignalTime).toLocaleString('pt-BR') : undefined,
+                  }}
+                  onStart={(id) => startBotMutation.mutate(id)}
+                  onPause={(id) => pauseBotMutation.mutate(id)}
+                  onStop={(id) => stopBotMutation.mutate(id)}
+                  onConfigure={(id) => toast({ title: "Em breve", description: "Edição de configurações em desenvolvimento." })}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <div>
           <h2 className="text-lg font-semibold mb-4">Operações Recentes</h2>
           <TradeLog 
-            trades={mockTrades} 
+            trades={(stats?.recentTrades || []).map(t => ({
+              id: t.id,
+              timestamp: t.createdAt ? new Date(t.createdAt).toLocaleString('pt-BR') : "",
+              symbol: t.symbol,
+              side: t.side as "buy" | "sell",
+              price: t.price,
+              amount: t.amount,
+              total: t.total,
+              pnl: t.pnl || undefined,
+              pnlPercent: t.pnlPercent || undefined,
+              indicators: t.indicators,
+              status: t.status as "completed" | "pending" | "cancelled",
+            }))}
             onExport={() => toast({ title: "Exportar", description: "Histórico exportado com sucesso!" })}
           />
         </div>
@@ -168,27 +233,15 @@ export default function Dashboard() {
           open={createModalOpen}
           onOpenChange={setCreateModalOpen}
           onCreateBot={(config) => {
-            const newBot: Bot = {
-              id: `bot-${Date.now()}`,
+            createBotMutation.mutate({
               name: config.name,
               symbol: config.symbol,
-              status: "stopped",
-              pnl: 0,
-              pnlPercent: 0,
-              totalTrades: 0,
-              winRate: 0,
-              avgProfit: 0,
-              activeIndicators: [
-                config.indicators.rsi.enabled && "RSI",
-                config.indicators.macd.enabled && "MACD",
-                config.indicators.bollingerBands.enabled && "Bollinger",
-                config.indicators.ema.enabled && "EMA",
-              ].filter(Boolean) as string[],
-            };
-            setBots([...bots, newBot]);
-            toast({
-              title: "Robô criado!",
-              description: `${config.name} foi criado com sucesso. Clique em Iniciar para começar.`,
+              investment: config.investment,
+              stopLoss: config.stopLoss,
+              takeProfit: config.takeProfit,
+              indicators: config.indicators,
+              minSignals: config.minSignals,
+              interval: "1h",
             });
           }}
         />
