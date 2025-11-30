@@ -26,6 +26,7 @@ export interface BotConfig {
   takeProfit: number;
   indicators: IndicatorSettings;
   minSignals: number;
+  interval: string;
 }
 
 const defaultIndicators: IndicatorSettings = {
@@ -52,6 +53,7 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
     takeProfit: 10,
     indicators: defaultIndicators,
     minSignals: 2,
+    interval: "1h",
   });
 
   const symbolsQueryKey = symbolSearch.trim() 
@@ -95,6 +97,7 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
         takeProfit: 10,
         indicators: defaultIndicators,
         minSignals: 2,
+        interval: "1h",
       });
       setStep("basic");
       setSymbolSearch("");
@@ -222,6 +225,30 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
               />
             </div>
 
+            <div className="space-y-2">
+              <Label>Intervalo de Análise</Label>
+              <Select 
+                value={config.interval} 
+                onValueChange={(v) => setConfig({ ...config, interval: v })}
+              >
+                <SelectTrigger data-testid="select-interval">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1m">1 minuto (muito rápido)</SelectItem>
+                  <SelectItem value="5m">5 minutos (rápido)</SelectItem>
+                  <SelectItem value="15m">15 minutos (moderado)</SelectItem>
+                  <SelectItem value="30m">30 minutos</SelectItem>
+                  <SelectItem value="1h">1 hora (recomendado)</SelectItem>
+                  <SelectItem value="4h">4 horas (lento)</SelectItem>
+                  <SelectItem value="1d">1 dia (muito lento)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Com que frequência o robô irá analisar o mercado e tomar decisões
+              </p>
+            </div>
+
             <div className="flex justify-end">
               <Button onClick={() => setStep("indicators")} data-testid="button-next-indicators">
                 Próximo: Indicadores
@@ -317,9 +344,11 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
                 <div><span className="text-muted-foreground">Nome:</span> {config.name || "-"}</div>
                 <div><span className="text-muted-foreground">Par:</span> {config.symbol}</div>
                 <div><span className="text-muted-foreground">Investimento:</span> ${config.investment}</div>
+                <div><span className="text-muted-foreground">Intervalo:</span> {config.interval}</div>
                 <div><span className="text-muted-foreground">Stop Loss:</span> {config.stopLoss}%</div>
                 <div><span className="text-muted-foreground">Take Profit:</span> {config.takeProfit}%</div>
                 <div><span className="text-muted-foreground">Indicadores:</span> {enabledIndicatorsCount} ativos</div>
+                <div><span className="text-muted-foreground">Sinais Mínimos:</span> {config.minSignals}</div>
               </div>
             </div>
 
