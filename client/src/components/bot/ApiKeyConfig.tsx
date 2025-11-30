@@ -48,6 +48,19 @@ export function ApiKeyConfig() {
     },
   });
 
+  const disableDemoMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/binance/disable-demo", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/binance/status"] });
+      toast({ title: "Modo Demo Desativado", description: "Você pode agora conectar sua conta Binance." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
   const isConnected = status?.connected;
   const isDemoMode = status?.demoMode;
   const hasGeoRestriction = status?.message?.includes("restricted location");
@@ -111,14 +124,35 @@ export function ApiKeyConfig() {
         )}
 
         {isDemoMode ? (
-          <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center gap-3">
-            <Play className="h-8 w-8 text-blue-500" />
-            <div>
-              <p className="font-medium text-blue-500">Modo Demonstração Ativo</p>
-              <p className="text-sm text-muted-foreground">
-                O sistema está operando com dados simulados. Crie robôs e explore todas as funcionalidades!
-              </p>
+          <div className="space-y-3">
+            <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center gap-3">
+              <Play className="h-8 w-8 text-blue-500" />
+              <div>
+                <p className="font-medium text-blue-500">Modo Demonstração Ativo</p>
+                <p className="text-sm text-muted-foreground">
+                  O sistema está operando com dados simulados. Crie robôs e explore todas as funcionalidades!
+                </p>
+              </div>
             </div>
+            <Button 
+              variant="outline"
+              onClick={() => disableDemoMutation.mutate()}
+              disabled={disableDemoMutation.isPending}
+              className="w-full"
+              data-testid="button-disable-demo"
+            >
+              {disableDemoMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Desativando...
+                </>
+              ) : (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  Desativar Modo Demo
+                </>
+              )}
+            </Button>
           </div>
         ) : isConnected ? (
           <div className="p-4 rounded-lg bg-muted/50 flex items-center gap-3">

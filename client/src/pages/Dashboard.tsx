@@ -4,6 +4,7 @@ import { StatsCard } from "@/components/bot/StatsCard";
 import { BotStatusCard } from "@/components/bot/BotStatusCard";
 import { TradeLog } from "@/components/bot/TradeLog";
 import { CreateBotModal } from "@/components/bot/CreateBotModal";
+import { EditBotModal } from "@/components/bot/EditBotModal";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -34,6 +35,8 @@ interface Stats {
 export default function Dashboard() {
   const { toast } = useToast();
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editBotId, setEditBotId] = useState<string | null>(null);
 
   const { data: connectionStatus } = useQuery<{ connected: boolean; message?: string }>({
     queryKey: ["/api/binance/status"],
@@ -202,7 +205,10 @@ export default function Dashboard() {
                   onStart={(id) => startBotMutation.mutate(id)}
                   onPause={(id) => pauseBotMutation.mutate(id)}
                   onStop={(id) => stopBotMutation.mutate(id)}
-                  onConfigure={(id) => toast({ title: "Em breve", description: "Edição de configurações em desenvolvimento." })}
+                  onConfigure={(id) => {
+                    setEditBotId(id);
+                    setEditModalOpen(true);
+                  }}
                 />
               ))}
             </div>
@@ -244,6 +250,12 @@ export default function Dashboard() {
               interval: "1h",
             });
           }}
+        />
+
+        <EditBotModal
+          open={editModalOpen}
+          onOpenChange={setEditModalOpen}
+          botId={editBotId}
         />
       </div>
     </TooltipProvider>
