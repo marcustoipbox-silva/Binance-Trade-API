@@ -259,6 +259,16 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     }
   });
 
+  app.get("/api/activities", async (req, res) => {
+    try {
+      const { limit } = req.query;
+      const activities = await storage.getActivities(limit ? parseInt(limit as string) : 50);
+      res.json(activities);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/analyze", async (req, res) => {
     try {
       const { symbol, indicators, interval } = req.body;
