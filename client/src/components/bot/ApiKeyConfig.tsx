@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Eye, EyeOff, Shield, Check, X, Loader2, Play, Globe } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { AlertTriangle, Eye, EyeOff, Shield, Check, X, Loader2, Play, Globe, FlaskConical, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -14,15 +15,16 @@ export function ApiKeyConfig() {
   const [apiKey, setApiKey] = useState("");
   const [secretKey, setSecretKey] = useState("");
   const [showSecret, setShowSecret] = useState(false);
+  const [useTestnet, setUseTestnet] = useState(true);
 
-  const { data: status, isLoading: statusLoading } = useQuery<{ connected: boolean; message?: string; demoMode?: boolean }>({
+  const { data: status, isLoading: statusLoading } = useQuery<{ connected: boolean; message?: string; demoMode?: boolean; testnet?: boolean }>({
     queryKey: ["/api/binance/status"],
     refetchInterval: 30000,
   });
 
   const connectMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/binance/connect", { apiKey, secretKey });
+      return apiRequest("POST", "/api/binance/connect", { apiKey, secretKey, testnet: useTestnet });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/binance/status"] });
@@ -61,8 +63,22 @@ export function ApiKeyConfig() {
     },
   });
 
+  const disconnectMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/binance/disconnect", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/binance/status"] });
+      toast({ title: "Desconectado", description: "Conexão com a Binance encerrada." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
   const isConnected = status?.connected;
   const isDemoMode = status?.demoMode;
+  const isTestnet = status?.testnet;
   const hasGeoRestriction = status?.message?.includes("restricted location");
 
   return (
@@ -81,9 +97,11 @@ export function ApiKeyConfig() {
             className={
               isDemoMode 
                 ? "bg-blue-500/10 text-blue-500" 
-                : isConnected 
-                  ? "bg-green-500/10 text-green-500" 
-                  : "bg-red-500/10 text-red-500"
+                : isTestnet && isConnected
+                  ? "bg-yellow-500/10 text-yellow-500"
+                  : isConnected 
+                    ? "bg-green-500/10 text-green-500" 
+                    : "bg-red-500/10 text-red-500"
             }
             data-testid="badge-connection-status"
           >
@@ -93,6 +111,11 @@ export function ApiKeyConfig() {
               <>
                 <Play className="h-3 w-3 mr-1" />
                 Modo Demo
+              </>
+            ) : isTestnet && isConnected ? (
+              <>
+                <FlaskConical className="h-3 w-3 mr-1" />
+                Testnet
               </>
             ) : isConnected ? (
               <>
@@ -155,14 +178,44 @@ export function ApiKeyConfig() {
             </Button>
           </div>
         ) : isConnected ? (
-          <div className="p-4 rounded-lg bg-muted/50 flex items-center gap-3">
-            <Shield className="h-8 w-8 text-green-500" />
-            <div>
-              <p className="font-medium text-green-500">Conexão ativa</p>
-              <p className="text-sm text-muted-foreground">
-                Sua conta Binance está conectada e pronta para operar.
-              </p>
+          <div className="space-y-3">
+            <div className={`p-4 rounded-lg flex items-center gap-3 ${isTestnet ? "bg-yellow-500/10 border border-yellow-500/20" : "bg-muted/50"}`}>
+              {isTestnet ? (
+                <FlaskConical className="h-8 w-8 text-yellow-500" />
+              ) : (
+                <Shield className="h-8 w-8 text-green-500" />
+              )}
+              <div>
+                <p className={`font-medium ${isTestnet ? "text-yellow-500" : "text-green-500"}`}>
+                  {isTestnet ? "Testnet Conectada" : "Conexão ativa"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {isTestnet 
+                    ? "Ambiente de testes ativo. Use fundos fictícios para testar suas estratégias."
+                    : "Sua conta Binance está conectada e pronta para operar."
+                  }
+                </p>
+              </div>
             </div>
+            <Button 
+              variant="outline"
+              onClick={() => disconnectMutation.mutate()}
+              disabled={disconnectMutation.isPending}
+              className="w-full"
+              data-testid="button-disconnect"
+            >
+              {disconnectMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Desconectando...
+                </>
+              ) : (
+                <>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Desconectar
+                </>
+              )}
+            </Button>
           </div>
         ) : (
           <>
@@ -215,6 +268,26 @@ export function ApiKeyConfig() {
                   </Button>
                 </div>
               </div>
+
+              <div className="flex items-center justify-between p-3 rounded-md bg-yellow-500/10 border border-yellow-500/20">
+                <div className="flex items-center gap-2">
+                  <FlaskConical className="h-4 w-4 text-yellow-500" />
+                  <div>
+                    <Label htmlFor="testnet-switch" className="text-sm font-medium cursor-pointer">
+                      Usar Testnet
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Ambiente de testes com fundos fictícios (recomendado)
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="testnet-switch"
+                  checked={useTestnet}
+                  onCheckedChange={setUseTestnet}
+                  data-testid="switch-testnet"
+                />
+              </div>
             </div>
           </>
         )}
@@ -222,12 +295,23 @@ export function ApiKeyConfig() {
         {!isConnected && !isDemoMode && (
           <>
             <div className="text-xs text-muted-foreground space-y-1">
-              <p className="font-medium">Como obter suas chaves:</p>
+              <p className="font-medium">Como obter suas chaves {useTestnet ? "(Testnet)" : ""}:</p>
               <ol className="list-decimal list-inside space-y-0.5">
-                <li>Acesse sua conta Binance</li>
-                <li>Vá em Gerenciamento de API</li>
-                <li>Crie uma nova chave API com permissão de trading spot</li>
-                <li>Copie e cole as chaves aqui</li>
+                {useTestnet ? (
+                  <>
+                    <li>Acesse <a href="https://testnet.binance.vision/" target="_blank" rel="noopener noreferrer" className="text-primary underline">testnet.binance.vision</a></li>
+                    <li>Faça login com sua conta GitHub</li>
+                    <li>Clique em "Generate HMAC_SHA256 Key"</li>
+                    <li>Copie a API Key e Secret Key geradas</li>
+                  </>
+                ) : (
+                  <>
+                    <li>Acesse sua conta Binance</li>
+                    <li>Vá em Gerenciamento de API</li>
+                    <li>Crie uma nova chave API com permissão de trading spot</li>
+                    <li>Copie e cole as chaves aqui</li>
+                  </>
+                )}
               </ol>
             </div>
 
@@ -242,6 +326,11 @@ export function ApiKeyConfig() {
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Conectando...
+                  </>
+                ) : useTestnet ? (
+                  <>
+                    <FlaskConical className="h-4 w-4 mr-2" />
+                    Conectar ao Testnet
                   </>
                 ) : (
                   <>
