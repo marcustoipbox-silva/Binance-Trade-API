@@ -1,16 +1,265 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import * as binance from "./services/binance";
+import * as botManager from "./services/botManager";
+import { analyzeIndicators } from "./services/indicators";
+import { botConfigSchema, indicatorSettingsSchema } from "@shared/schema";
+import { z } from "zod";
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+let apiKeys: { apiKey: string; secretKey: string } | null = null;
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+export async function registerRoutes(app: Express): Promise<void> {
+  
+  app.post("/api/binance/connect", async (req, res) => {
+    try {
+      const { apiKey, secretKey } = req.body;
+      
+      if (!apiKey || !secretKey) {
+        return res.status(400).json({ error: "API key e secret key são obrigatórios" });
+      }
+      
+      const success = binance.initializeBinanceClient({ apiKey, secretKey });
+      if (!success) {
+        return res.status(500).json({ error: "Falha ao inicializar cliente Binance" });
+      }
+      
+      const testResult = await binance.testConnection();
+      if (!testResult.success) {
+        return res.status(401).json({ error: testResult.message });
+      }
+      
+      apiKeys = { apiKey, secretKey };
+      
+      res.json({ success: true, message: "Conexão estabelecida com sucesso" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Erro ao conectar" });
+    }
+  });
 
-  return httpServer;
+  app.get("/api/binance/status", async (req, res) => {
+    try {
+      const connected = binance.isConnected();
+      if (!connected) {
+        return res.json({ connected: false });
+      }
+      
+      const testResult = await binance.testConnection();
+      res.json({ connected: testResult.success, message: testResult.message });
+    } catch (error: any) {
+      res.json({ connected: false, error: error.message });
+    }
+  });
+
+  app.get("/api/binance/balance", async (req, res) => {
+    try {
+      const balances = await binance.getAccountBalance();
+      res.json(balances);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/binance/price/:symbol", async (req, res) => {
+    try {
+      const { symbol } = req.params;
+      const price = await binance.getPrice(symbol);
+      res.json({ symbol, price });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/binance/ticker/:symbol", async (req, res) => {
+    try {
+      const { symbol } = req.params;
+      const ticker = await binance.get24hTicker(symbol);
+      res.json(ticker);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/binance/candles/:symbol", async (req, res) => {
+    try {
+      const { symbol } = req.params;
+      const { interval = "1h", limit = "100" } = req.query;
+      const candles = await binance.getCandles(symbol, interval as string, parseInt(limit as string));
+      res.json(candles);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/bots", async (req, res) => {
+    try {
+      const bots = await botManager.getAllBotsWithStats();
+      res.json(bots);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/bots/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const bot = await botManager.getBotWithStats(id);
+      if (!bot) {
+        return res.status(404).json({ error: "Bot não encontrado" });
+      }
+      res.json(bot);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/bots", async (req, res) => {
+    try {
+      const parsed = botConfigSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Configuração inválida", details: parsed.error.errors });
+      }
+      
+      const config = parsed.data;
+      const bot = await botManager.createBot({
+        name: config.name,
+        symbol: config.symbol,
+        investment: config.investment,
+        stopLoss: config.stopLoss,
+        takeProfit: config.takeProfit,
+        minSignals: config.minSignals,
+        interval: config.interval,
+        indicators: config.indicators,
+        status: "stopped",
+      });
+      
+      res.status(201).json(bot);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/bots/:id/start", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const bot = await botManager.startBot(id);
+      res.json(bot);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/bots/:id/pause", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const bot = await botManager.pauseBot(id);
+      res.json(bot);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/bots/:id/stop", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const bot = await botManager.stopBot(id);
+      res.json(bot);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/bots/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await botManager.deleteBot(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/bots/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      const bot = await storage.updateBot(id, updateData);
+      if (!bot) {
+        return res.status(404).json({ error: "Bot não encontrado" });
+      }
+      res.json(bot);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/trades", async (req, res) => {
+    try {
+      const { botId } = req.query;
+      const trades = await storage.getAllTrades(botId as string | undefined);
+      res.json(trades);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/trades/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const trade = await storage.getTrade(id);
+      if (!trade) {
+        return res.status(404).json({ error: "Trade não encontrado" });
+      }
+      res.json(trade);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/analyze", async (req, res) => {
+    try {
+      const { symbol, indicators, interval } = req.body;
+      
+      if (!symbol) {
+        return res.status(400).json({ error: "Símbolo é obrigatório" });
+      }
+      
+      const parsedIndicators = indicatorSettingsSchema.safeParse(indicators);
+      if (!parsedIndicators.success) {
+        return res.status(400).json({ error: "Configuração de indicadores inválida" });
+      }
+      
+      const analysis = await botManager.analyzeSymbol(symbol, parsedIndicators.data, interval || "1h");
+      res.json(analysis);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/stats", async (req, res) => {
+    try {
+      const bots = await botManager.getAllBotsWithStats();
+      const trades = await storage.getAllTrades();
+      
+      const totalPnl = bots.reduce((sum, b) => sum + b.totalPnl, 0);
+      const activeBots = bots.filter((b) => b.status === "active").length;
+      const totalTrades = bots.reduce((sum, b) => sum + b.totalTrades, 0);
+      const totalWins = bots.reduce((sum, b) => sum + b.winningTrades, 0);
+      const avgWinRate = totalTrades > 0 ? (totalWins / totalTrades) * 100 : 0;
+      
+      const totalInvestment = bots.reduce((sum, b) => sum + b.investment, 0);
+      const pnlPercent = totalInvestment > 0 ? (totalPnl / totalInvestment) * 100 : 0;
+      
+      res.json({
+        totalPnl,
+        pnlPercent,
+        activeBots,
+        totalBots: bots.length,
+        totalTrades,
+        avgWinRate,
+        recentTrades: trades.slice(0, 10),
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 }
