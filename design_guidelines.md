@@ -1,15 +1,16 @@
-# Design Guidelines: Binance Trading System
+# Design Guidelines: Binance Automated Trading Bot System
 
 ## Design Approach
 
-**Selected Approach:** Design System + Trading Platform Reference  
-**Justification:** Trading platforms demand clarity, efficiency, and trust. Drawing inspiration from Binance, Coinbase Pro, and TradingView while implementing Material Design principles for consistent data visualization and interaction patterns.
+**Selected Approach:** Trading Platform Reference + Material Design System  
+**Justification:** Bot automation platforms require real-time monitoring clarity, instant control feedback, and professional trust signals. Drawing inspiration from 3Commas, Cryptohopper, and TradingView bots while implementing Material Design principles for consistent data visualization.
 
 **Core Principles:**
-- Information hierarchy: Critical data (prices, balances) always visible
-- Instant feedback: Real-time updates without page refreshes
-- Trust signals: Professional aesthetics, clear status indicators
-- Efficiency: Minimal clicks to execute trades
+- Bot status visibility: Active/paused/stopped states immediately clear
+- Performance at-a-glance: P&L metrics front and center
+- Safe controls: Confirmation flows for critical actions
+- Strategy transparency: Configuration parameters always visible
+- Dark theme foundation: Reduces eye strain during extended monitoring
 
 ---
 
@@ -18,195 +19,175 @@
 **Font Family:** Inter (via Google Fonts CDN)
 
 **Hierarchy:**
-- Page Headers: 24px, font-semibold (Dashboard, Orders, Portfolio)
-- Section Headers: 18px, font-semibold (Market Overview, Order Book)
-- Data Labels: 14px, font-medium (Asset names, order types)
-- Data Values: 16px, font-mono (prices, quantities, percentages)
+- Page Headers: 28px, font-bold (Dashboard, Estratégias, Histórico)
+- Bot Names: 20px, font-semibold
+- Section Headers: 16px, font-semibold
+- Data Labels: 14px, font-medium
+- Numerical Data: 18px, font-mono (preços, lucros, percentagens)
 - Body Text: 14px, font-normal
-- Small Text: 12px, font-normal (timestamps, helper text)
+- Small Text: 12px, font-normal (timestamps, descrições)
 
-**Critical:** Use monospace font (font-mono) for all numerical data to ensure alignment and readability in tables.
+**Critical:** All prices, percentages, quantities use font-mono for perfect alignment. All interface text in Portuguese (Brazil).
+
+---
+
+## Color System
+
+**Dark Theme Foundation:**
+- Background Primary: #0B0E11 (deep dark)
+- Background Secondary: #161A1E (card backgrounds)
+- Background Tertiary: #1E2329 (input fields, panels)
+- Border Color: #2B3139
+- Text Primary: #EAECEF (high contrast white)
+- Text Secondary: #848E9C (muted gray)
+
+**Semantic Colors:**
+- Profit Green: #0ECB81 (used for positive values, buy actions)
+- Loss Red: #F6465D (used for negative values, sell actions)
+- Warning Yellow: #F0B90B (for alerts, pending states)
+- Info Blue: #3861FB (for neutral information)
+- Success Green Glow: #0ECB81 with 20% opacity for backgrounds
+- Danger Red Glow: #F6465D with 20% opacity for backgrounds
+
+**Bot Status Colors:**
+- Active: #0ECB81
+- Paused: #F0B90B
+- Stopped: #848E9C
+- Error: #F6465D
 
 ---
 
 ## Layout System
 
-**Spacing Primitives:** Tailwind units of 2, 4, 6, and 8 (p-2, m-4, gap-6, h-8)
+**Spacing Primitives:** Tailwind units of 2, 4, 6, and 8 (p-4, gap-6, m-8)
 
-**Grid Structure:**
-- Dashboard: Sidebar navigation (256px fixed) + Main content area (flex-1)
-- Main area: 2-column layout on desktop (market data 60% + order panel 40%)
-- Mobile: Single column stack, collapsible sidebar
-
-**Container Strategy:**
-- Full-width dashboard canvas
-- Content sections: max-w-none (allow full data visibility)
-- Modals/Forms: max-w-2xl centered
+**Dashboard Structure:**
+- Sidebar Navigation: Fixed left (w-64), dark background (#161A1E)
+- Main Content: Full-width flex container with padding (p-6 lg:p-8)
+- Grid Layouts: grid-cols-1 md:grid-cols-2 xl:grid-cols-3 for bot cards
+- Panel Spacing: gap-6 between major sections
 
 ---
 
 ## Component Library
 
-### Navigation
-**Sidebar Navigation:**
-- Fixed left sidebar (w-64)
-- Logo/branding at top (h-16)
-- Navigation items with icons (Heroicons)
-- Active state: slight indent + border-l-4
-- Balance summary at bottom
-- Compact mode toggle for smaller screens
+### Navigation Sidebar
+- Logo at top (h-16, centered)
+- Navigation items with Heroicons (home, chart-bar, cog, clock)
+- Active state: bg-background-tertiary + border-l-4 border-profit-green
+- Account balance summary card at bottom (total equity, today's P&L)
+- Logout button at very bottom
 
-**Top Bar:**
-- Account info and notifications (right-aligned)
-- Quick market selector dropdown
-- Connection status indicator (API connected/disconnected)
+### Bot Management Cards
 
-### Data Display Components
+**Bot Status Card:**
+- Large card (p-6, rounded-lg, bg-background-secondary)
+- Top row: Bot name + status badge (rounded-full pill)
+- Large P&L display (font-mono, text-3xl) with 24h percentage
+- Small line chart showing P&L trend (Chart.js mini sparkline)
+- Grid of key metrics: Total Trades, Win Rate, Avg Profit
+- Bottom action buttons: Iniciar/Pausar/Parar (w-full for single, grid-cols-3 for multiple)
+- Grid layout: grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6
 
-**Price Cards:**
-- Large price display with 24h change percentage
-- Compact symbol info with icon
-- Sparkline chart (use Chart.js via CDN)
-- Grid layout: grid-cols-2 md:grid-cols-4 gap-4
+**Strategy Configuration Panel:**
+- Tabbed interface for different strategies (DCA, Grid Trading, RSI)
+- Form inputs with floating labels (Portuguese)
+- Numerical inputs with increment/decrement buttons
+- Strategy preview visualization (grid levels, DCA schedule)
+- Range sliders with value display for percentages
+- Save/Reset buttons at bottom (justify-end)
 
-**Order Book:**
-- Two-column table (bids/asks)
-- Price levels with depth visualization bars
-- Monospace numbers, right-aligned
-- Sticky header row
-- Max height with scroll (max-h-96 overflow-y-auto)
+### Control Components
 
-**Trading Chart:**
-- Full-width candlestick chart (use Lightweight Charts library via CDN)
-- Time interval selector (1m, 5m, 15m, 1h, 4h, 1D)
-- Height: h-96 on desktop, h-64 on mobile
+**Action Buttons:**
+- Primary: Iniciar Bot (bg-profit-green, text-black, h-12, font-semibold)
+- Warning: Pausar Bot (bg-warning-yellow, text-black, h-12)
+- Danger: Parar Bot (bg-loss-red, text-white, h-12)
+- All buttons: rounded-lg, full-width on mobile, min-w-32 on desktop
+- Blurred backgrounds when over images/charts (backdrop-blur-sm)
 
-**Data Tables:**
-- Striped rows for readability (even:bg-opacity-50)
-- Sortable columns with icons
-- Status badges (filled, cancelled, executed)
-- Pagination controls at bottom
-- Responsive: horizontal scroll on mobile
+**Status Indicators:**
+- Real-time connection: Small pulsing dot + "Conectado" text (top-right)
+- Bot running indicator: Animated pulse effect on active badges
+- API status: Badge with connection health (green/yellow/red)
 
-### Form Components
+### Data Visualization
 
-**Order Entry Panel:**
-- Tab navigation (Market, Limit, Stop-Loss)
-- Input fields with inline labels
-- Quantity sliders with percentage buttons (25%, 50%, 75%, 100%)
-- Large action buttons: "Buy" and "Sell" (h-12, full width)
-- Order preview summary above submit
+**Performance Dashboard:**
+- Large summary cards row: Total Profit, Today's P&L, Active Bots, Total Trades
+- Main performance chart (h-96): Daily P&L line chart with gradient fill
+- Time range selector: 24h, 7d, 30d, All (horizontal tabs)
+- Asset allocation donut chart (Profit/Loss distribution)
 
-**Input Fields:**
-- Floating labels for price/quantity inputs
-- Right-aligned text for numerical inputs
-- Unit indicators (BTC, USDT) inside input
-- Error states with icon + message below
+**Trade History Table:**
+- Full-width table with sticky header
+- Columns: Data/Hora, Par, Tipo, Quantidade, Preço, Lucro/Perda
+- Striped rows (even:bg-background-tertiary with 30% opacity)
+- Sortable columns with arrow icons
+- Profit/Loss column: colored text with + or - prefix
+- Pagination at bottom (showing "1-20 de 150")
+- Filter bar above table: date range picker, strategy filter, profit/loss filter
 
-### Status & Feedback
+### Modals & Dialogs
 
-**Status Badges:**
-- Pill-shaped (rounded-full px-3 py-1)
-- Size variants: text-xs, text-sm
-- States: pending, filled, cancelled, expired
+**Bot Deletion Confirmation:**
+- Centered modal (max-w-md)
+- Warning icon (exclamation-triangle, text-loss-red, large)
+- Bold question: "Tem certeza que deseja parar e deletar este bot?"
+- Bot details recap (name, current P&L)
+- Two-button footer: Cancelar (secondary), Deletar (danger red)
 
-**Alerts/Notifications:**
-- Toast notifications (top-right, fixed position)
-- Icons from Heroicons (check-circle, exclamation-triangle)
-- Auto-dismiss after 5 seconds
-- Slide-in animation (optional, subtle)
-
-**Loading States:**
-- Skeleton screens for tables
-- Spinner for real-time price updates
-- Pulse animation for data refresh indicators
-
-### Modals
-
-**API Key Management Modal:**
-- Centered overlay (max-w-md)
-- Form with labeled inputs
-- Password visibility toggle
-- Warning text about security
-- Two-button footer (Cancel + Save)
-
-**Confirmation Dialogs:**
-- Compact size (max-w-sm)
-- Clear action description
-- Highlighted critical info (order amount, price)
-- Two-button footer with visual hierarchy
+**Strategy Configuration Modal:**
+- Larger modal (max-w-3xl)
+- Two-column layout: Configuration form (left) + Preview visualization (right)
+- Multi-step wizard for complex strategies
+- Progress indicator at top
+- Save as Template option
+- Footer: Voltar, Salvar Rascunho, Ativar Bot
 
 ---
 
-## Dashboard Layout Structure
+## Bot Dashboard Layout
 
-**Main Dashboard View:**
+**Main View Structure:**
 
-1. **Top Bar** (h-16): Market selector, account info, notifications
-2. **Content Area** (3-column grid on desktop):
-   - Left: Order book + Recent trades (w-1/4)
-   - Center: Trading chart + Order entry form (w-1/2)
-   - Right: Positions + Order history (w-1/4)
-3. **Bottom Panel** (collapsible): Active orders table (h-64)
+1. **Top Stats Bar** (grid-cols-4 gap-4): Total Portfolio Value, Today's P&L, Active Bots, Win Rate
+2. **Active Bots Section**: Grid of bot status cards (2-3 columns)
+3. **Performance Chart Section**: Large chart with time range tabs
+4. **Recent Activity**: Combined view of recent trades + bot actions (2-column split)
 
-**Portfolio View:**
-- Asset cards grid (grid-cols-1 md:grid-cols-3 gap-6)
-- Total balance summary card (highlighted, col-span-full)
-- Asset allocation pie chart
-- Performance chart (24h, 7d, 30d tabs)
-
-**Order History View:**
-- Filters bar (date range, status, symbol)
-- Full-width table with all order details
-- Export button (top-right)
+**Monitoring View:**
+- Full-width bot performance chart
+- Live order flow visualization (grid trading levels, DCA schedule)
+- Real-time trade notifications (slide-in from right)
+- Strategy parameter adjustments panel (right sidebar)
 
 ---
 
 ## Responsive Behavior
 
-**Desktop (lg and up):**
-- Multi-column layouts active
-- Sidebar always visible
-- All panels accessible simultaneously
-
-**Tablet (md):**
-- 2-column layouts
-- Collapsible sidebar
-- Order entry form moves to modal
-
-**Mobile (base):**
-- Single column stack
-- Bottom navigation bar replaces sidebar
-- Swipeable tabs for different sections
-- Simplified order entry (essential fields only)
-
----
-
-## Animations
-
-**Minimal, Purposeful Only:**
-- Price change flash (quick opacity pulse on update)
-- Modal enter/exit (fade + scale)
-- Tab transitions (smooth content swap)
-- **No hover effects, no complex animations**
+**Desktop (lg+):** 3-column bot grid, sidebar always visible, dual-panel layouts
+**Tablet (md):** 2-column bot grid, collapsible sidebar, stacked panels
+**Mobile:** Single column, bottom nav bar, full-width cards, simplified charts (h-64)
 
 ---
 
 ## Images
 
-**No hero images.** This is a data-dense application focused on functionality. Use:
-- Cryptocurrency icons/logos from CoinGecko API or similar (16px, 24px sizes)
-- Status icons from Heroicons throughout
-- Chart visualizations generated by libraries
+**No hero images.** This is a data monitoring application. Use:
+- Cryptocurrency pair icons (24px circular avatars for BTC/USDT etc.)
+- Strategy icons from Heroicons (chart-bar for Grid, clock for DCA, chart-line for RSI)
+- Bot avatar placeholders (colored circles with initials for custom bots)
 
 ---
 
-## Key Interaction Patterns
+## Key Interactions
 
-- Click asset card → Navigate to trading view for that pair
-- Click order row → Expand with full details
-- Quick trade buttons → Pre-fill order form with suggested values
-- Real-time updates → Subtle visual indicator (pulse dot)
-- Keyboard shortcuts → Numeric keypad for quick order entry
+- Bot card click → Navigate to detailed monitoring view
+- Strategy tab click → Smooth form transition with preview update
+- Real-time P&L updates → Subtle number color flash on change
+- Bot control buttons → Loading state during API calls, success confirmation toast
+- Chart hover → Tooltip with exact values and timestamp
+- Keyboard shortcuts: Space to pause/resume selected bot, Esc to close modals
 
-This design prioritizes clarity, speed, and trust—essential for financial applications where every millisecond and pixel matters.
+**Animation Philosophy:** Minimal functional animations only - modal transitions (fade+scale), success confirmations (checkmark animation), error shakes. Real-time data updates use color flash, not movement.
