@@ -225,6 +225,8 @@ async function executeBotCycle(botId: string): Promise<void> {
     }
 
     const indicators = ensureValidIndicatorSettings(bot.indicators);
+    console.log(`[Bot ${bot.name}] Indicadores salvos no bot:`, JSON.stringify(bot.indicators));
+    console.log(`[Bot ${bot.name}] Indicadores após validação:`, JSON.stringify(indicators));
     const analysis = analyzeIndicators(candles, indicators);
     
     const effectiveMinSignals = getEffectiveMinSignals(bot, indicators);

@@ -76,22 +76,33 @@ export function analyzeIndicators(
     let signal: "buy" | "sell" | "neutral" = "neutral";
     let description = `RSI: ${lastRSI?.toFixed(2) || "N/A"}`;
 
+    console.log(`[RSI DEBUG] =====================`);
+    console.log(`[RSI DEBUG] settings.rsi =`, JSON.stringify(settings.rsi));
+    console.log(`[RSI DEBUG] overbought = ${settings.rsi.overbought} (type: ${typeof settings.rsi.overbought})`);
+    console.log(`[RSI DEBUG] oversold = ${settings.rsi.oversold} (type: ${typeof settings.rsi.oversold})`);
+    console.log(`[RSI DEBUG] lastRSI = ${lastRSI?.toFixed(2)} (type: ${typeof lastRSI})`);
+
     if (lastRSI !== undefined) {
-      console.log(`[RSI] Valor calculado: ${lastRSI.toFixed(2)}, overbought=${settings.rsi.overbought}, oversold=${settings.rsi.oversold}`);
+      const overbought = Number(settings.rsi.overbought);
+      const oversold = Number(settings.rsi.oversold);
       
-      if (lastRSI < settings.rsi.oversold) {
+      console.log(`[RSI DEBUG] Comparando: RSI=${lastRSI.toFixed(2)}, oversold=${oversold}, overbought=${overbought}`);
+      console.log(`[RSI DEBUG] RSI < oversold? ${lastRSI} < ${oversold} = ${lastRSI < oversold}`);
+      console.log(`[RSI DEBUG] RSI > overbought? ${lastRSI} > ${overbought} = ${lastRSI > overbought}`);
+      
+      if (lastRSI < oversold) {
         signal = "buy";
-        description = `RSI ${lastRSI.toFixed(2)} < ${settings.rsi.oversold} (sobrevenda)`;
+        description = `RSI ${lastRSI.toFixed(2)} < ${oversold} (sobrevenda)`;
         buyCount++;
-        console.log(`[RSI] Sinal: BUY (${lastRSI.toFixed(2)} < ${settings.rsi.oversold})`);
-      } else if (lastRSI > settings.rsi.overbought) {
+        console.log(`[RSI DEBUG] >>> RESULTADO: BUY`);
+      } else if (lastRSI > overbought) {
         signal = "sell";
-        description = `RSI ${lastRSI.toFixed(2)} > ${settings.rsi.overbought} (sobrecompra)`;
+        description = `RSI ${lastRSI.toFixed(2)} > ${overbought} (sobrecompra)`;
         sellCount++;
-        console.log(`[RSI] Sinal: SELL (${lastRSI.toFixed(2)} > ${settings.rsi.overbought})`);
+        console.log(`[RSI DEBUG] >>> RESULTADO: SELL`);
       } else {
-        description = `RSI ${lastRSI.toFixed(2)} (neutro: ${settings.rsi.oversold}-${settings.rsi.overbought})`;
-        console.log(`[RSI] Sinal: NEUTRO (${settings.rsi.oversold} <= ${lastRSI.toFixed(2)} <= ${settings.rsi.overbought})`);
+        description = `RSI ${lastRSI.toFixed(2)} (neutro: ${oversold}-${overbought})`;
+        console.log(`[RSI DEBUG] >>> RESULTADO: NEUTRO`);
       }
     }
 
