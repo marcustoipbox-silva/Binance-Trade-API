@@ -60,6 +60,20 @@ const intervalMs: Record<string, number> = {
   "1d": 24 * 60 * 60 * 1000,
 };
 
+function countEnabledIndicators(indicators: IndicatorSettings): number {
+  let count = 0;
+  if (indicators.rsi.enabled) count++;
+  if (indicators.macd.enabled) count++;
+  if (indicators.bollingerBands.enabled) count++;
+  if (indicators.ema.enabled) count++;
+  return count;
+}
+
+function getEffectiveMinSignals(bot: Bot, indicators: IndicatorSettings): number {
+  const enabledCount = countEnabledIndicators(indicators);
+  return Math.min(bot.minSignals, enabledCount);
+}
+
 export async function createBot(config: InsertBot): Promise<Bot> {
   const bot = await storage.createBot({
     ...config,
@@ -210,7 +224,11 @@ async function executeBotCycle(botId: string): Promise<void> {
     const indicators = ensureValidIndicatorSettings(bot.indicators);
     const analysis = analyzeIndicators(candles, indicators);
     
-    console.log(`[Bot ${bot.name}] Analysis result: overallSignal=${analysis.overallSignal}, buyCount=${analysis.buyCount}, sellCount=${analysis.sellCount}, minSignals=${bot.minSignals}`);
+    const effectiveMinSignals = getEffectiveMinSignals(bot, indicators);
+    const enabledCount = countEnabledIndicators(indicators);
+    
+    console.log(`[Bot ${bot.name}] Analysis result: overallSignal=${analysis.overallSignal}, buyCount=${analysis.buyCount}, sellCount=${analysis.sellCount}`);
+    console.log(`[Bot ${bot.name}] Indicators: ${enabledCount} ativos, minSignals configurado=${bot.minSignals}, efetivo=${effectiveMinSignals}`);
     console.log(`[Bot ${bot.name}] Signals:`, analysis.signals.map(s => `${s.name}=${s.value?.toFixed?.(2) || s.value}(${s.signal})`).join(', '));
 
     const activeIndicatorDetails = analysis.signals.map(s => {
@@ -248,10 +266,12 @@ async function executeBotCycle(botId: string): Promise<void> {
     });
 
     const shouldTrade = 
-      (analysis.overallSignal === "buy" && analysis.buyCount >= bot.minSignals) ||
-      (analysis.overallSignal === "sell" && analysis.sellCount >= bot.minSignals);
+      (analysis.overallSignal === "buy" && analysis.buyCount >= effectiveMinSignals) ||
+      (analysis.overallSignal === "sell" && analysis.sellCount >= effectiveMinSignals);
 
-    console.log(`[Bot ${bot.name}] shouldTrade=${shouldTrade} (overallSignal=${analysis.overallSignal}, buyCount=${analysis.buyCount} >= minSignals=${bot.minSignals}? ${analysis.buyCount >= bot.minSignals})`);
+    console.log(`[Bot ${bot.name}] shouldTrade=${shouldTrade}`);
+    console.log(`[Bot ${bot.name}] - BUY: ${analysis.buyCount} sinais >= ${effectiveMinSignals}? ${analysis.buyCount >= effectiveMinSignals}`);
+    console.log(`[Bot ${bot.name}] - SELL: ${analysis.sellCount} sinais >= ${effectiveMinSignals}? ${analysis.sellCount >= effectiveMinSignals}`);
 
     if (!shouldTrade) {
       console.log(`[Bot ${bot.name}] Waiting for trade signal...`);
@@ -262,8 +282,25 @@ async function executeBotCycle(botId: string): Promise<void> {
     const symbolInfo = await binance.getSymbolMinQuantity(bot.symbol);
     
     const openPosition = await storage.getOpenPosition(botId);
+    
+    console.log(`[Bot ${bot.name}] openPosition=${openPosition ? `SIM (compra @ ${openPosition.price})` : 'NÃO'}, currentBalance=${bot.currentBalance}`);
 
-    if (analysis.overallSignal === "buy" && !openPosition) {
+    if (analysis.overallSignal === "buy") {
+      if (openPosition) {
+        console.log(`[Bot ${bot.name}] BUY signal mas JÁ tem posição aberta @ ${openPosition.price}`);
+        await storage.addActivity({
+          botId,
+          botName: bot.name,
+          symbol: bot.symbol,
+          type: 'analysis',
+          message: `Sinal de COMPRA detectado, mas já existe posição aberta @ $${openPosition.price.toFixed(4)}`,
+          buySignals: analysis.buyCount,
+          sellSignals: analysis.sellCount,
+          indicators: activeIndicatorDetails,
+        });
+        return;
+      }
+      
       const investmentAmount = bot.investment;
       let quantity = investmentAmount / currentPrice;
       
@@ -300,16 +337,52 @@ async function executeBotCycle(botId: string): Promise<void> {
           currentBalance: quantity,
         });
         
+        await storage.addActivity({
+          botId,
+          botName: bot.name,
+          symbol: bot.symbol,
+          type: 'buy',
+          message: `COMPRA executada: ${quantity} @ $${currentPrice.toFixed(4)} = $${(quantity * currentPrice).toFixed(2)}`,
+          buySignals: analysis.buyCount,
+          sellSignals: analysis.sellCount,
+          indicators: activeIndicatorDetails,
+        });
+        
         console.log(`[Bot ${bot.name}] BUY order executed: ${order.orderId}`);
       } catch (error: any) {
         console.error(`[Bot ${bot.name}] BUY order failed:`, error.message);
+        await storage.addActivity({
+          botId,
+          botName: bot.name,
+          symbol: bot.symbol,
+          type: 'error',
+          message: `Erro na COMPRA: ${error.message}`,
+          buySignals: analysis.buyCount,
+          sellSignals: analysis.sellCount,
+          indicators: activeIndicatorDetails,
+        });
       }
       
-    } else if (analysis.overallSignal === "sell" && openPosition) {
+    } else if (analysis.overallSignal === "sell") {
+      if (!openPosition) {
+        console.log(`[Bot ${bot.name}] SELL signal mas SEM posição aberta - nada a vender`);
+        await storage.addActivity({
+          botId,
+          botName: bot.name,
+          symbol: bot.symbol,
+          type: 'analysis',
+          message: 'Sinal de VENDA detectado, mas não há posição aberta para vender',
+          buySignals: analysis.buyCount,
+          sellSignals: analysis.sellCount,
+          indicators: activeIndicatorDetails,
+        });
+        return;
+      }
+      
       const quantity = bot.currentBalance;
       
       if (quantity <= 0) {
-        console.log(`[Bot ${bot.name}] No position to sell`);
+        console.log(`[Bot ${bot.name}] currentBalance=0, nada a vender`);
         return;
       }
       
@@ -351,9 +424,31 @@ async function executeBotCycle(botId: string): Promise<void> {
           currentBalance: 0,
         });
         
+        const pnlSign = pnl >= 0 ? '+' : '';
+        await storage.addActivity({
+          botId,
+          botName: bot.name,
+          symbol: bot.symbol,
+          type: 'sell',
+          message: `VENDA executada: ${formattedQty} @ $${currentPrice.toFixed(4)} | P&L: ${pnlSign}$${pnl.toFixed(2)} (${pnlSign}${pnlPercent.toFixed(2)}%)`,
+          buySignals: analysis.buyCount,
+          sellSignals: analysis.sellCount,
+          indicators: activeIndicatorDetails,
+        });
+        
         console.log(`[Bot ${bot.name}] SELL order executed: ${order.orderId}, PnL: ${pnl.toFixed(2)}`);
       } catch (error: any) {
         console.error(`[Bot ${bot.name}] SELL order failed:`, error.message);
+        await storage.addActivity({
+          botId,
+          botName: bot.name,
+          symbol: bot.symbol,
+          type: 'error',
+          message: `Erro na VENDA: ${error.message}`,
+          buySignals: analysis.buyCount,
+          sellSignals: analysis.sellCount,
+          indicators: activeIndicatorDetails,
+        });
       }
     }
 
