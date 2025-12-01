@@ -71,7 +71,10 @@ function countEnabledIndicators(indicators: IndicatorSettings): number {
 
 function getEffectiveMinSignals(bot: Bot, indicators: IndicatorSettings): number {
   const enabledCount = countEnabledIndicators(indicators);
-  return Math.min(bot.minSignals, enabledCount);
+  if (enabledCount === 0) {
+    return bot.minSignals;
+  }
+  return Math.max(1, Math.min(bot.minSignals, enabledCount));
 }
 
 export async function createBot(config: InsertBot): Promise<Bot> {
@@ -241,13 +244,17 @@ async function executeBotCycle(botId: string): Promise<void> {
       .map(s => `${s.name}: ${s.description}`)
       .join('; ');
     
+    const minSignalsInfo = effectiveMinSignals !== bot.minSignals 
+      ? `${effectiveMinSignals} necessários (ajustado de ${bot.minSignals} para ${enabledCount} indicadores ativos)`
+      : `${effectiveMinSignals} necessários`;
+    
     await storage.addActivity({
       botId,
       botName: bot.name,
       symbol: bot.symbol,
       type: 'analysis',
       message: analysis.overallSignal === 'hold' 
-        ? `Aguardando sinais (${bot.minSignals} necessários). ${signalDetails || 'Nenhum sinal ativo'}`
+        ? `Aguardando sinais (${minSignalsInfo}). ${signalDetails || 'Nenhum sinal ativo'}`
         : `Sinal detectado: ${analysis.overallSignal.toUpperCase()} - ${signalDetails}`,
       buySignals: analysis.buyCount,
       sellSignals: analysis.sellCount,
