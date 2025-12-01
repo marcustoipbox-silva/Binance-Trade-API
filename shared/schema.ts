@@ -21,8 +21,8 @@ export const indicatorSettingsSchema = z.object({
   rsi: z.object({
     enabled: z.boolean(),
     period: z.number().min(2).max(100).default(14),
-    overbought: z.number().min(50).max(100).default(70),
-    oversold: z.number().min(0).max(50).default(30),
+    overbought: z.number().min(1).max(99).default(70),
+    oversold: z.number().min(1).max(99).default(30),
   }),
   macd: z.object({
     enabled: z.boolean(),
