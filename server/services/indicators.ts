@@ -239,9 +239,9 @@ export function analyzeIndicators(
   const sellStrength = enabledCount > 0 ? (sellCount / enabledCount) * 100 : 0;
 
   let overallSignal: "buy" | "sell" | "hold" = "hold";
-  if (buyCount >= 2 && buyCount > sellCount) {
+  if (buyCount > 0 && buyCount > sellCount) {
     overallSignal = "buy";
-  } else if (sellCount >= 2 && sellCount > buyCount) {
+  } else if (sellCount > 0 && sellCount > buyCount) {
     overallSignal = "sell";
   }
 
