@@ -212,7 +212,15 @@ async function executeBotCycle(botId: string): Promise<void> {
     
     console.log(`[Bot ${bot.name}] Analysis: ${analysis.overallSignal} (Buy: ${analysis.buyCount}, Sell: ${analysis.sellCount})`);
 
-    const activeIndicatorNames = analysis.signals.map(s => `${s.name}: ${s.signal}`);
+    const activeIndicatorDetails = analysis.signals.map(s => {
+      const valueStr = typeof s.value === 'number' ? s.value.toFixed(2) : s.value;
+      return `${s.name}=${valueStr} (${s.signal})`;
+    });
+    
+    const signalDetails = analysis.signals
+      .filter(s => s.signal !== 'neutral')
+      .map(s => `${s.name}: ${s.description}`)
+      .join('; ');
     
     await storage.addActivity({
       botId,
@@ -220,11 +228,11 @@ async function executeBotCycle(botId: string): Promise<void> {
       symbol: bot.symbol,
       type: 'analysis',
       message: analysis.overallSignal === 'hold' 
-        ? `Aguardando sinais (${bot.minSignals} necessários)`
-        : `Sinal detectado: ${analysis.overallSignal.toUpperCase()}`,
+        ? `Aguardando sinais (${bot.minSignals} necessários). ${signalDetails || 'Nenhum sinal ativo'}`
+        : `Sinal detectado: ${analysis.overallSignal.toUpperCase()} - ${signalDetails}`,
       buySignals: analysis.buyCount,
       sellSignals: analysis.sellCount,
-      indicators: activeIndicatorNames,
+      indicators: activeIndicatorDetails,
     });
 
     const signalMap: Record<string, string> = {
@@ -361,6 +369,18 @@ async function executeBotCycle(botId: string): Promise<void> {
 
   } catch (error: any) {
     console.error(`[Bot ${bot.name}] Cycle error:`, error.message);
+    
+    await storage.addActivity({
+      botId,
+      botName: bot.name,
+      symbol: bot.symbol,
+      type: 'error',
+      message: `Erro no ciclo: ${error.message}`,
+      buySignals: 0,
+      sellSignals: 0,
+      indicators: [],
+    });
+    
     await storage.updateBot(botId, { status: "error" });
   }
 }

@@ -226,10 +226,39 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     try {
       const { id } = req.params;
       const updateData = req.body;
+      
+      const oldBot = await storage.getBot(id);
+      if (!oldBot) {
+        return res.status(404).json({ error: "Bot não encontrado" });
+      }
+      
       const bot = await storage.updateBot(id, updateData);
       if (!bot) {
         return res.status(404).json({ error: "Bot não encontrado" });
       }
+      
+      // Se o robô está ativo e o intervalo ou indicadores mudaram, reiniciar
+      if (oldBot.status === "active" && (
+        updateData.interval !== undefined || 
+        updateData.indicators !== undefined ||
+        updateData.minSignals !== undefined
+      )) {
+        console.log(`[Bot ${bot.name}] Reiniciando devido a alteração de configuração`);
+        await botManager.pauseBot(id);
+        await botManager.startBot(id);
+        
+        await storage.addActivity({
+          botId: id,
+          botName: bot.name,
+          symbol: bot.symbol,
+          type: 'start',
+          message: 'Robô reiniciado após alteração de configuração',
+          buySignals: 0,
+          sellSignals: 0,
+          indicators: [],
+        });
+      }
+      
       res.json(bot);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
