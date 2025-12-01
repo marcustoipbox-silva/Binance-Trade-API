@@ -23,6 +23,9 @@ export const indicatorSettingsSchema = z.object({
     period: z.number().min(2).max(100).default(14),
     overbought: z.number().min(1).max(99).default(70),
     oversold: z.number().min(1).max(99).default(30),
+  }).refine(data => data.overbought > data.oversold, {
+    message: "Sobrecompra deve ser maior que Sobrevenda",
+    path: ["overbought"],
   }),
   macd: z.object({
     enabled: z.boolean(),
