@@ -1,4 +1,13 @@
-import type { InsertUser, User, Bot, InsertBot, Trade, InsertTrade, BotActivity } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { Pool } from "@neondatabase/serverless";
+import { 
+  users, bots, trades, activities,
+  type InsertUser, type User, 
+  type Bot, type InsertBot, 
+  type Trade, type InsertTrade, 
+  type BotActivity, type InsertActivity 
+} from "@shared/schema";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -21,43 +30,36 @@ export interface IStorage {
   clearActivities(): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User> = new Map();
-  private bots: Map<string, Bot> = new Map();
-  private trades: Map<string, Trade> = new Map();
-  private activities: BotActivity[] = [];
-  private maxActivities = 100;
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const db = drizzle(pool);
 
+export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0];
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result[0];
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = crypto.randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
   }
 
   async getAllBots(): Promise<Bot[]> {
-    return Array.from(this.bots.values());
+    return await db.select().from(bots).orderBy(desc(bots.createdAt));
   }
 
   async getBot(id: string): Promise<Bot | undefined> {
-    return this.bots.get(id);
+    const result = await db.select().from(bots).where(eq(bots.id, id));
+    return result[0];
   }
 
   async createBot(insertBot: InsertBot): Promise<Bot> {
-    const id = crypto.randomUUID();
-    const now = new Date();
-    const bot: Bot = {
-      id,
+    const result = await db.insert(bots).values({
       name: insertBot.name,
       symbol: insertBot.symbol,
       status: insertBot.status || "stopped",
@@ -73,57 +75,40 @@ export class MemStorage implements IStorage {
       totalPnl: 0,
       lastSignal: null,
       lastSignalTime: null,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.bots.set(id, bot);
-    return bot;
+    }).returning();
+    return result[0];
   }
 
   async updateBot(id: string, data: Partial<Bot>): Promise<Bot | undefined> {
-    const bot = this.bots.get(id);
-    if (!bot) return undefined;
-
-    const updatedBot: Bot = {
-      ...bot,
-      ...data,
-      updatedAt: new Date(),
-    };
-    this.bots.set(id, updatedBot);
-    return updatedBot;
+    const result = await db.update(bots)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(bots.id, id))
+      .returning();
+    return result[0];
   }
 
   async deleteBot(id: string): Promise<void> {
-    this.bots.delete(id);
-    const tradeIds = Array.from(this.trades.keys());
-    for (const tradeId of tradeIds) {
-      const trade = this.trades.get(tradeId);
-      if (trade && trade.botId === id) {
-        this.trades.delete(tradeId);
-      }
-    }
+    await db.delete(trades).where(eq(trades.botId, id));
+    await db.delete(activities).where(eq(activities.botId, id));
+    await db.delete(bots).where(eq(bots.id, id));
   }
 
   async getAllTrades(botId?: string): Promise<Trade[]> {
-    const trades = Array.from(this.trades.values());
     if (botId) {
-      return trades.filter((t) => t.botId === botId);
+      return await db.select().from(trades)
+        .where(eq(trades.botId, botId))
+        .orderBy(desc(trades.createdAt));
     }
-    return trades.sort((a, b) => {
-      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return bTime - aTime;
-    });
+    return await db.select().from(trades).orderBy(desc(trades.createdAt));
   }
 
   async getTrade(id: string): Promise<Trade | undefined> {
-    return this.trades.get(id);
+    const result = await db.select().from(trades).where(eq(trades.id, id));
+    return result[0];
   }
 
   async createTrade(insertTrade: InsertTrade): Promise<Trade> {
-    const id = crypto.randomUUID();
-    const trade: Trade = {
-      id,
+    const result = await db.insert(trades).values({
       botId: insertTrade.botId,
       symbol: insertTrade.symbol,
       side: insertTrade.side,
@@ -136,21 +121,16 @@ export class MemStorage implements IStorage {
       indicators: insertTrade.indicators || [],
       binanceOrderId: insertTrade.binanceOrderId || null,
       status: insertTrade.status || "completed",
-      createdAt: new Date(),
-    };
-    this.trades.set(id, trade);
-    return trade;
+    }).returning();
+    return result[0];
   }
 
   async getOpenPosition(botId: string): Promise<Trade | undefined> {
-    const trades = await this.getAllTrades(botId);
-    const sortedTrades = trades.sort((a, b) => {
-      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return bTime - aTime;
-    });
+    const botTrades = await db.select().from(trades)
+      .where(eq(trades.botId, botId))
+      .orderBy(desc(trades.createdAt));
     
-    const lastTrade = sortedTrades[0];
+    const lastTrade = botTrades[0];
     if (lastTrade && lastTrade.side === "buy") {
       return lastTrade;
     }
@@ -158,28 +138,39 @@ export class MemStorage implements IStorage {
   }
 
   async getActivities(limit: number = 50): Promise<BotActivity[]> {
-    return this.activities.slice(0, limit);
+    return await db.select().from(activities)
+      .orderBy(desc(activities.timestamp))
+      .limit(limit);
   }
 
   async addActivity(activity: Omit<BotActivity, 'id' | 'timestamp'>): Promise<BotActivity> {
-    const newActivity: BotActivity = {
-      ...activity,
-      id: crypto.randomUUID(),
-      timestamp: new Date(),
-    };
+    const result = await db.insert(activities).values({
+      botId: activity.botId,
+      botName: activity.botName,
+      symbol: activity.symbol,
+      type: activity.type,
+      message: activity.message,
+      buySignals: activity.buySignals,
+      sellSignals: activity.sellSignals,
+      indicators: activity.indicators,
+    }).returning();
     
-    this.activities.unshift(newActivity);
-    
-    if (this.activities.length > this.maxActivities) {
-      this.activities = this.activities.slice(0, this.maxActivities);
+    const count = await db.select().from(activities);
+    if (count.length > 100) {
+      const oldActivities = await db.select().from(activities)
+        .orderBy(desc(activities.timestamp))
+        .offset(100);
+      for (const old of oldActivities) {
+        await db.delete(activities).where(eq(activities.id, old.id));
+      }
     }
     
-    return newActivity;
+    return result[0];
   }
 
   async clearActivities(): Promise<void> {
-    this.activities = [];
+    await db.delete(activities);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

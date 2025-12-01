@@ -166,15 +166,23 @@ export interface BotWithStats extends Bot {
   activeIndicators: string[];
 }
 
-export interface BotActivity {
-  id: string;
-  botId: string;
-  botName: string;
-  symbol: string;
-  type: 'analysis' | 'buy' | 'sell' | 'start' | 'stop' | 'error';
-  message: string;
-  buySignals: number;
-  sellSignals: number;
-  indicators: string[];
-  timestamp: Date;
-}
+export const activities = pgTable("activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  botId: varchar("bot_id").notNull(),
+  botName: text("bot_name").notNull(),
+  symbol: text("symbol").notNull(),
+  type: text("type").notNull(),
+  message: text("message").notNull(),
+  buySignals: integer("buy_signals").notNull().default(0),
+  sellSignals: integer("sell_signals").notNull().default(0),
+  indicators: text("indicators").array().notNull().default([]),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+export const insertActivitySchema = createInsertSchema(activities).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InsertActivity = z.infer<typeof insertActivitySchema>;
+export type BotActivity = typeof activities.$inferSelect;
