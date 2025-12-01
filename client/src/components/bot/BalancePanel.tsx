@@ -4,6 +4,7 @@ import { Wallet, RefreshCw, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Bot } from "@shared/schema";
 
 interface Balance {
   asset: string;
@@ -31,11 +32,19 @@ export function BalancePanel() {
     enabled: isConnected,
   });
 
+  const { data: bots = [] } = useQuery<Bot[]>({
+    queryKey: ["/api/bots"],
+  });
+
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/binance/balance"] });
   };
 
-  const mainAssets = ["USDT", "BTC", "ETH", "BNB", "BUSD"];
+  const tradedAssets = bots
+    .map(bot => bot.symbol.split('/')[0])
+    .filter((asset, index, arr) => arr.indexOf(asset) === index);
+
+  const mainAssets = ["USDT", "BTC", "ETH", "BNB", ...tradedAssets];
   const sortedBalances = [...balances].sort((a, b) => {
     const aIndex = mainAssets.indexOf(a.asset);
     const bIndex = mainAssets.indexOf(b.asset);
@@ -45,7 +54,7 @@ export function BalancePanel() {
     return (b.free + b.locked) - (a.free + a.locked);
   });
 
-  const displayBalances = sortedBalances.slice(0, 8);
+  const displayBalances = sortedBalances.slice(0, 10);
 
   return (
     <Card data-testid="card-balance-panel">
