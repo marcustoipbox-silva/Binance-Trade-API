@@ -210,7 +210,8 @@ async function executeBotCycle(botId: string): Promise<void> {
     const indicators = ensureValidIndicatorSettings(bot.indicators);
     const analysis = analyzeIndicators(candles, indicators);
     
-    console.log(`[Bot ${bot.name}] Analysis: ${analysis.overallSignal} (Buy: ${analysis.buyCount}, Sell: ${analysis.sellCount})`);
+    console.log(`[Bot ${bot.name}] Analysis result: overallSignal=${analysis.overallSignal}, buyCount=${analysis.buyCount}, sellCount=${analysis.sellCount}, minSignals=${bot.minSignals}`);
+    console.log(`[Bot ${bot.name}] Signals:`, analysis.signals.map(s => `${s.name}=${s.value?.toFixed?.(2) || s.value}(${s.signal})`).join(', '));
 
     const activeIndicatorDetails = analysis.signals.map(s => {
       const valueStr = typeof s.value === 'number' ? s.value.toFixed(2) : s.value;
@@ -250,8 +251,10 @@ async function executeBotCycle(botId: string): Promise<void> {
       (analysis.overallSignal === "buy" && analysis.buyCount >= bot.minSignals) ||
       (analysis.overallSignal === "sell" && analysis.sellCount >= bot.minSignals);
 
+    console.log(`[Bot ${bot.name}] shouldTrade=${shouldTrade} (overallSignal=${analysis.overallSignal}, buyCount=${analysis.buyCount} >= minSignals=${bot.minSignals}? ${analysis.buyCount >= bot.minSignals})`);
+
     if (!shouldTrade) {
-      console.log(`[Bot ${bot.name}] No trade signal (min signals: ${bot.minSignals})`);
+      console.log(`[Bot ${bot.name}] Waiting for trade signal...`);
       return;
     }
 
