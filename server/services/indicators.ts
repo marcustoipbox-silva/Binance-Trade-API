@@ -77,16 +77,21 @@ export function analyzeIndicators(
     let description = `RSI: ${lastRSI?.toFixed(2) || "N/A"}`;
 
     if (lastRSI !== undefined) {
+      console.log(`[RSI] Valor calculado: ${lastRSI.toFixed(2)}, overbought=${settings.rsi.overbought}, oversold=${settings.rsi.oversold}`);
+      
       if (lastRSI < settings.rsi.oversold) {
         signal = "buy";
-        description = `Zona de sobrevenda (< ${settings.rsi.oversold})`;
+        description = `RSI ${lastRSI.toFixed(2)} < ${settings.rsi.oversold} (sobrevenda)`;
         buyCount++;
+        console.log(`[RSI] Sinal: BUY (${lastRSI.toFixed(2)} < ${settings.rsi.oversold})`);
       } else if (lastRSI > settings.rsi.overbought) {
         signal = "sell";
-        description = `Zona de sobrecompra (> ${settings.rsi.overbought})`;
+        description = `RSI ${lastRSI.toFixed(2)} > ${settings.rsi.overbought} (sobrecompra)`;
         sellCount++;
+        console.log(`[RSI] Sinal: SELL (${lastRSI.toFixed(2)} > ${settings.rsi.overbought})`);
       } else {
-        description = `Neutro (${settings.rsi.oversold}-${settings.rsi.overbought})`;
+        description = `RSI ${lastRSI.toFixed(2)} (neutro: ${settings.rsi.oversold}-${settings.rsi.overbought})`;
+        console.log(`[RSI] Sinal: NEUTRO (${settings.rsi.oversold} <= ${lastRSI.toFixed(2)} <= ${settings.rsi.overbought})`);
       }
     }
 
