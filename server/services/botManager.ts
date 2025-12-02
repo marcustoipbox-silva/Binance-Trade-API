@@ -373,14 +373,17 @@ async function executeBotCycle(botId: string): Promise<void> {
       }
       
     } else if (analysis.overallSignal === "sell") {
-      if (!openPosition) {
-        console.log(`[Bot ${bot.name}] SELL signal mas SEM posição aberta - nada a vender`);
+      const quantity = bot.currentBalance;
+      
+      // Verificar se tem saldo para vender (não precisa de openPosition se tem saldo sincronizado)
+      if (quantity <= 0) {
+        console.log(`[Bot ${bot.name}] SELL signal mas currentBalance=0 - nada a vender`);
         await storage.addActivity({
           botId,
           botName: bot.name,
           symbol: bot.symbol,
           type: 'analysis',
-          message: 'Sinal de VENDA detectado, mas não há posição aberta para vender',
+          message: 'Sinal de VENDA detectado, mas saldo é zero',
           buySignals: analysis.buyCount,
           sellSignals: analysis.sellCount,
           indicators: activeIndicatorDetails,
@@ -388,23 +391,20 @@ async function executeBotCycle(botId: string): Promise<void> {
         return;
       }
       
-      const quantity = bot.currentBalance;
-      
-      if (quantity <= 0) {
-        console.log(`[Bot ${bot.name}] currentBalance=0, nada a vender`);
-        return;
-      }
-      
       const formattedQty = binance.formatQuantity(quantity, symbolInfo.stepSize);
       
-      console.log(`[Bot ${bot.name}] Placing SELL order: ${formattedQty} @ ${currentPrice}`);
+      // Se não tem openPosition mas tem saldo, usar preço atual como referência (saldo sincronizado)
+      const entryPrice = openPosition?.price || currentPrice;
+      const hasPriceReference = !!openPosition;
+      
+      console.log(`[Bot ${bot.name}] Placing SELL order: ${formattedQty} @ ${currentPrice} (entrada: ${hasPriceReference ? entryPrice : 'sincronizado'})`);
       
       try {
         const order = await binance.placeMarketOrder(bot.symbol, "SELL", formattedQty);
         
-        const entryPrice = openPosition.price;
-        const pnl = (currentPrice - entryPrice) * formattedQty;
-        const pnlPercent = ((currentPrice - entryPrice) / entryPrice) * 100;
+        // Calcular P&L apenas se tiver referência de preço de entrada
+        const pnl = hasPriceReference ? (currentPrice - entryPrice) * formattedQty : 0;
+        const pnlPercent = hasPriceReference ? ((currentPrice - entryPrice) / entryPrice) * 100 : 0;
         
         const trade: InsertTrade = {
           botId,
