@@ -349,6 +349,130 @@ export async function getAvailableSymbols(search?: string): Promise<{ symbol: st
   return getDefaultSymbols(search);
 }
 
+// Buscar histórico real de trades da Binance
+export interface TradeHistory {
+  orderId: string;
+  symbol: string;
+  side: "BUY" | "SELL";
+  price: number;
+  qty: number;
+  quoteQty: number;
+  time: Date;
+  isBuyer: boolean;
+}
+
+export interface PositionInfo {
+  balance: number;
+  avgBuyPrice: number;
+  totalBought: number;
+  totalSold: number;
+  trades: TradeHistory[];
+}
+
+export async function getMyTrades(symbol: string, limit: number = 500): Promise<TradeHistory[]> {
+  if (!mainClient) {
+    throw new Error("Cliente Binance não inicializado");
+  }
+
+  try {
+    const formattedSymbol = symbol.replace("/", "");
+    const trades = await mainClient.getAccountTradeList({ symbol: formattedSymbol, limit });
+    
+    return trades.map((t: any) => ({
+      orderId: String(t.orderId),
+      symbol: t.symbol,
+      side: t.isBuyer ? "BUY" : "SELL",
+      price: parseFloat(String(t.price)),
+      qty: parseFloat(String(t.qty)),
+      quoteQty: parseFloat(String(t.quoteQty)),
+      time: new Date(t.time),
+      isBuyer: t.isBuyer,
+    }));
+  } catch (error: any) {
+    console.error(`Error getting trades for ${symbol}:`, error);
+    throw new Error(error.message || "Falha ao obter histórico de trades");
+  }
+}
+
+// Calcular posição atual baseada no histórico real
+export async function calculatePosition(symbol: string): Promise<PositionInfo> {
+  if (!mainClient) {
+    throw new Error("Cliente Binance não inicializado");
+  }
+
+  const baseAsset = symbol.split('/')[0];
+  
+  // Buscar saldo atual da Binance
+  const balance = await getAssetBalance(baseAsset);
+  
+  // Buscar histórico de trades
+  const trades = await getMyTrades(symbol);
+  
+  // Calcular totais
+  let totalBought = 0;
+  let totalBoughtValue = 0;
+  let totalSold = 0;
+  
+  for (const trade of trades) {
+    if (trade.isBuyer) {
+      totalBought += trade.qty;
+      totalBoughtValue += trade.qty * trade.price;
+    } else {
+      totalSold += trade.qty;
+    }
+  }
+  
+  // Preço médio de compra
+  const avgBuyPrice = totalBought > 0 ? totalBoughtValue / totalBought : 0;
+  
+  console.log(`[Binance] Position for ${symbol}: balance=${balance}, avgBuyPrice=${avgBuyPrice.toFixed(4)}, bought=${totalBought}, sold=${totalSold}`);
+  
+  return {
+    balance,
+    avgBuyPrice,
+    totalBought,
+    totalSold,
+    trades,
+  };
+}
+
+// Encontrar o último trade de compra que ainda está "aberto" (não vendido)
+export async function findOpenBuyTrade(symbol: string): Promise<TradeHistory | null> {
+  const trades = await getMyTrades(symbol);
+  
+  // Ordenar por tempo (mais recente primeiro)
+  trades.sort((a, b) => b.time.getTime() - a.time.getTime());
+  
+  // Calcular saldo líquido de trades
+  let netBalance = 0;
+  for (const trade of trades) {
+    if (trade.isBuyer) {
+      netBalance += trade.qty;
+    } else {
+      netBalance -= trade.qty;
+    }
+  }
+  
+  console.log(`[Binance] Net balance from trades: ${netBalance}`);
+  
+  // Se tem saldo líquido positivo, encontrar o trade de compra correspondente
+  if (netBalance > 0) {
+    // Percorrer trades do mais antigo ao mais recente para encontrar compras não vendidas
+    const chronologicalTrades = [...trades].reverse();
+    let remainingBalance = netBalance;
+    
+    for (const trade of chronologicalTrades) {
+      if (trade.isBuyer && remainingBalance > 0) {
+        // Este é um trade de compra que ainda está "aberto"
+        console.log(`[Binance] Found open buy trade: ${trade.qty} @ ${trade.price} (orderId: ${trade.orderId})`);
+        return trade;
+      }
+    }
+  }
+  
+  return null;
+}
+
 function getDefaultSymbols(search?: string): { symbol: string; formatted: string }[] {
   const defaultPairs = [
     { symbol: "BTCUSDT", formatted: "BTC/USDT" },
