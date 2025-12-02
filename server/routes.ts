@@ -222,7 +222,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     }
   });
 
-  // Sincronizar saldo do bot com a Binance
+  // Sincronizar saldo do bot com a Binance (usando histórico REAL de trades)
   app.post("/api/bots/:id/sync-balance", async (req, res) => {
     try {
       const { id } = req.params;
@@ -236,49 +236,82 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
         return res.status(400).json({ error: "API Binance não conectada" });
       }
       
-      // Extrair o ativo base do par (ex: PENDLE de PENDLE/USDT)
       const baseAsset = bot.symbol.split('/')[0];
-      const balance = await binance.getAssetBalance(baseAsset);
       
-      console.log(`[Sync] Bot ${bot.name}: ${baseAsset} balance = ${balance}`);
+      console.log(`[Sync] Buscando histórico REAL de trades para ${bot.symbol}...`);
       
-      // Verificar se já existe posição aberta
+      // Buscar posição real da Binance (saldo + histórico de trades)
+      const position = await binance.calculatePosition(bot.symbol);
+      
+      console.log(`[Sync] Bot ${bot.name}: saldo=${position.balance}, preço médio compra=$${position.avgBuyPrice.toFixed(4)}`);
+      
+      // Verificar se já existe posição aberta no storage
       const existingPosition = await storage.getOpenPosition(id);
       
-      // Se tem saldo mas não tem posição, criar trade de compra para registrar
-      if (balance > 0 && !existingPosition) {
-        const currentPrice = await binance.getPrice(bot.symbol);
+      // Se tem saldo mas não tem posição registrada, buscar o trade REAL da Binance
+      if (position.balance > 0 && !existingPosition) {
+        // Encontrar o trade de compra real que está "aberto"
+        const openBuyTrade = await binance.findOpenBuyTrade(bot.symbol);
         
-        console.log(`[Sync] Criando posição de entrada para ${balance} ${baseAsset} @ ${currentPrice}`);
-        
-        // Criar trade de compra para marcar a posição
-        await storage.createTrade({
-          botId: id,
-          symbol: bot.symbol,
-          side: "buy",
-          type: "MARKET",
-          price: currentPrice,
-          amount: balance,
-          total: balance * currentPrice,
-          indicators: ["SYNC"],
-          binanceOrderId: `sync-${Date.now()}`,
-          status: "completed",
-        });
-        
-        await storage.addActivity({
-          botId: id,
-          botName: bot.name,
-          symbol: bot.symbol,
-          type: 'buy',
-          message: `Posição sincronizada: ${balance} ${baseAsset} @ $${currentPrice.toFixed(4)} (preço atual)`,
-          buySignals: 0,
-          sellSignals: 0,
-          indicators: ["SYNC"],
-        });
+        if (openBuyTrade) {
+          console.log(`[Sync] Trade de COMPRA REAL encontrado: ${openBuyTrade.qty} @ $${openBuyTrade.price} (orderId: ${openBuyTrade.orderId})`);
+          
+          // Criar trade com dados REAIS da Binance
+          await storage.createTrade({
+            botId: id,
+            symbol: bot.symbol,
+            side: "buy",
+            type: "MARKET",
+            price: openBuyTrade.price,
+            amount: openBuyTrade.qty,
+            total: openBuyTrade.qty * openBuyTrade.price,
+            indicators: ["SYNC-REAL"],
+            binanceOrderId: openBuyTrade.orderId,
+            status: "completed",
+          });
+          
+          await storage.addActivity({
+            botId: id,
+            botName: bot.name,
+            symbol: bot.symbol,
+            type: 'buy',
+            message: `Trade REAL sincronizado: ${openBuyTrade.qty.toFixed(2)} ${baseAsset} @ $${openBuyTrade.price.toFixed(4)} (ordem: ${openBuyTrade.orderId})`,
+            buySignals: 0,
+            sellSignals: 0,
+            indicators: ["SYNC-REAL"],
+          });
+        } else {
+          // Fallback: usar preço médio de compra do histórico
+          console.log(`[Sync] Usando preço médio de compra: $${position.avgBuyPrice.toFixed(4)}`);
+          
+          await storage.createTrade({
+            botId: id,
+            symbol: bot.symbol,
+            side: "buy",
+            type: "MARKET",
+            price: position.avgBuyPrice,
+            amount: position.balance,
+            total: position.balance * position.avgBuyPrice,
+            indicators: ["SYNC-AVG"],
+            binanceOrderId: `sync-avg-${Date.now()}`,
+            status: "completed",
+          });
+          
+          await storage.addActivity({
+            botId: id,
+            botName: bot.name,
+            symbol: bot.symbol,
+            type: 'buy',
+            message: `Posição sincronizada (preço médio): ${position.balance.toFixed(2)} ${baseAsset} @ $${position.avgBuyPrice.toFixed(4)}`,
+            buySignals: 0,
+            sellSignals: 0,
+            indicators: ["SYNC-AVG"],
+          });
+        }
       }
       
       const updatedBot = await storage.updateBot(id, {
-        currentBalance: balance,
+        currentBalance: position.balance,
       });
       
       await storage.addActivity({
@@ -286,7 +319,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
         botName: bot.name,
         symbol: bot.symbol,
         type: 'analysis',
-        message: `Saldo sincronizado: ${balance} ${baseAsset}`,
+        message: `Saldo sincronizado: ${position.balance.toFixed(2)} ${baseAsset} (preço médio compra: $${position.avgBuyPrice.toFixed(4)})`,
         buySignals: 0,
         sellSignals: 0,
         indicators: [],
@@ -294,10 +327,12 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       
       res.json({ 
         success: true, 
-        balance,
-        message: `Saldo atualizado: ${balance} ${baseAsset}` 
+        balance: position.balance,
+        avgBuyPrice: position.avgBuyPrice,
+        message: `Sincronizado: ${position.balance.toFixed(2)} ${baseAsset} @ $${position.avgBuyPrice.toFixed(4)}` 
       });
     } catch (error: any) {
+      console.error(`[Sync] Erro:`, error);
       res.status(500).json({ error: error.message });
     }
   });
