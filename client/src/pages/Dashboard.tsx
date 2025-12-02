@@ -115,6 +115,25 @@ export default function Dashboard() {
     },
   });
 
+  const resetStatsMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/bots/${id}/reset-stats`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trades"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({ 
+        title: "Estatísticas resetadas!", 
+        description: "Os dados do robô foram zerados. Você pode sincronizar para buscar posições reais." 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro ao resetar", description: error.message, variant: "destructive" });
+    },
+  });
+
   const createBotMutation = useMutation({
     mutationFn: async (config: any) => {
       return apiRequest("POST", "/api/bots", config);
@@ -235,7 +254,9 @@ export default function Dashboard() {
                   onPause={(id) => pauseBotMutation.mutate(id)}
                   onStop={(id) => stopBotMutation.mutate(id)}
                   onSync={(id) => syncBalanceMutation.mutate(id)}
+                  onResetStats={(id) => resetStatsMutation.mutate(id)}
                   isSyncing={syncBalanceMutation.isPending}
+                  isResetting={resetStatsMutation.isPending}
                   onConfigure={(id) => {
                     setEditBotId(id);
                     setEditModalOpen(true);

@@ -10,7 +10,8 @@ import {
   Activity,
   BarChart3,
   Settings,
-  RefreshCw
+  RefreshCw,
+  RotateCcw
 } from "lucide-react";
 
 export type BotStatus = "active" | "paused" | "stopped" | "error";
@@ -37,7 +38,9 @@ interface BotStatusCardProps {
   onStop?: (id: string) => void;
   onConfigure?: (id: string) => void;
   onSync?: (id: string) => void;
+  onResetStats?: (id: string) => void;
   isSyncing?: boolean;
+  isResetting?: boolean;
 }
 
 const statusConfig = {
@@ -53,7 +56,7 @@ const signalConfig = {
   hold: { label: "AGUARDAR", className: "bg-muted text-muted-foreground" },
 };
 
-export function BotStatusCard({ bot, onStart, onPause, onStop, onConfigure, onSync, isSyncing }: BotStatusCardProps) {
+export function BotStatusCard({ bot, onStart, onPause, onStop, onConfigure, onSync, onResetStats, isSyncing, isResetting }: BotStatusCardProps) {
   const isPositive = bot.pnl >= 0;
   const status = statusConfig[bot.status];
 
@@ -180,6 +183,16 @@ export function BotStatusCard({ bot, onStart, onPause, onStop, onConfigure, onSy
           >
             <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
             Sincronizar
+          </Button>
+          <Button 
+            size="sm"
+            variant="outline"
+            onClick={() => onResetStats?.(bot.id)}
+            disabled={isResetting}
+            data-testid={`button-reset-${bot.id}`}
+          >
+            <RotateCcw className={`h-3 w-3 mr-1 ${isResetting ? 'animate-spin' : ''}`} />
+            Resetar
           </Button>
           <Button 
             size="sm"
