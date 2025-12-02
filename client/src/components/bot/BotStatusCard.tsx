@@ -9,7 +9,8 @@ import {
   TrendingDown,
   Activity,
   BarChart3,
-  Settings
+  Settings,
+  RefreshCw
 } from "lucide-react";
 
 export type BotStatus = "active" | "paused" | "stopped" | "error";
@@ -35,6 +36,8 @@ interface BotStatusCardProps {
   onPause?: (id: string) => void;
   onStop?: (id: string) => void;
   onConfigure?: (id: string) => void;
+  onSync?: (id: string) => void;
+  isSyncing?: boolean;
 }
 
 const statusConfig = {
@@ -50,7 +53,7 @@ const signalConfig = {
   hold: { label: "AGUARDAR", className: "bg-muted text-muted-foreground" },
 };
 
-export function BotStatusCard({ bot, onStart, onPause, onStop, onConfigure }: BotStatusCardProps) {
+export function BotStatusCard({ bot, onStart, onPause, onStop, onConfigure, onSync, isSyncing }: BotStatusCardProps) {
   const isPositive = bot.pnl >= 0;
   const status = statusConfig[bot.status];
 
@@ -133,7 +136,7 @@ export function BotStatusCard({ bot, onStart, onPause, onStop, onConfigure }: Bo
           </p>
         )}
 
-        <div className="grid grid-cols-4 gap-2 pt-2">
+        <div className="flex flex-wrap gap-2 pt-2">
           {bot.status !== "active" && (
             <Button 
               size="sm"
@@ -168,6 +171,16 @@ export function BotStatusCard({ bot, onStart, onPause, onStop, onConfigure }: Bo
               Parar
             </Button>
           )}
+          <Button 
+            size="sm"
+            variant="outline"
+            onClick={() => onSync?.(bot.id)}
+            disabled={isSyncing}
+            data-testid={`button-sync-${bot.id}`}
+          >
+            <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+            Sincronizar
+          </Button>
           <Button 
             size="sm"
             variant="outline"

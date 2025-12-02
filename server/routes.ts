@@ -222,6 +222,51 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     }
   });
 
+  // Sincronizar saldo do bot com a Binance
+  app.post("/api/bots/:id/sync-balance", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const bot = await storage.getBot(id);
+      
+      if (!bot) {
+        return res.status(404).json({ error: "Bot não encontrado" });
+      }
+      
+      if (!binance.isConnected()) {
+        return res.status(400).json({ error: "API Binance não conectada" });
+      }
+      
+      // Extrair o ativo base do par (ex: PENDLE de PENDLE/USDT)
+      const baseAsset = bot.symbol.split('/')[0];
+      const balance = await binance.getAssetBalance(baseAsset);
+      
+      console.log(`[Sync] Bot ${bot.name}: ${baseAsset} balance = ${balance}`);
+      
+      const updatedBot = await storage.updateBot(id, {
+        currentBalance: balance,
+      });
+      
+      await storage.addActivity({
+        botId: id,
+        botName: bot.name,
+        symbol: bot.symbol,
+        type: 'analysis',
+        message: `Saldo sincronizado: ${balance} ${baseAsset}`,
+        buySignals: 0,
+        sellSignals: 0,
+        indicators: [],
+      });
+      
+      res.json({ 
+        success: true, 
+        balance,
+        message: `Saldo atualizado: ${balance} ${baseAsset}` 
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.patch("/api/bots/:id", async (req, res) => {
     try {
       const { id } = req.params;

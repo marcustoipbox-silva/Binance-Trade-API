@@ -323,6 +323,24 @@ export function formatQuantity(quantity: number, stepSize: number): number {
   return Math.floor(quantity * Math.pow(10, precision)) / Math.pow(10, precision);
 }
 
+export async function getAssetBalance(asset: string): Promise<number> {
+  if (!mainClient) {
+    throw new Error("Cliente Binance não inicializado");
+  }
+
+  try {
+    const account = await mainClient.getAccountInformation();
+    const balance = account.balances.find((b) => b.asset === asset);
+    if (balance) {
+      return parseFloat(String(balance.free));
+    }
+    return 0;
+  } catch (error: any) {
+    console.error(`Error getting balance for ${asset}:`, error);
+    throw new Error(error.message || "Falha ao obter saldo");
+  }
+}
+
 let cachedSymbols: { symbol: string; baseAsset: string; quoteAsset: string }[] = [];
 let symbolsCacheTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000;
