@@ -24,6 +24,7 @@ export interface IStorage {
   getTrade(id: string): Promise<Trade | undefined>;
   createTrade(trade: InsertTrade): Promise<Trade>;
   getOpenPosition(botId: string): Promise<Trade | undefined>;
+  clearTradesByBot(botId: string): Promise<void>;
   
   getActivities(limit?: number): Promise<BotActivity[]>;
   addActivity(activity: Omit<BotActivity, 'id' | 'timestamp'>): Promise<BotActivity>;
@@ -166,6 +167,16 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
+  async clearTradesByBot(botId: string): Promise<void> {
+    const tradeIds = Array.from(this.trades.keys());
+    for (const tradeId of tradeIds) {
+      const trade = this.trades.get(tradeId);
+      if (trade && trade.botId === botId) {
+        this.trades.delete(tradeId);
+      }
+    }
+  }
+
   async getActivities(limit: number = 50): Promise<BotActivity[]> {
     return this.activities.slice(0, limit);
   }
@@ -300,6 +311,10 @@ export class DatabaseStorage implements IStorage {
       return lastTrade;
     }
     return undefined;
+  }
+
+  async clearTradesByBot(botId: string): Promise<void> {
+    await this.db.delete(trades).where(eq(trades.botId, botId));
   }
 
   async getActivities(limit: number = 50): Promise<BotActivity[]> {

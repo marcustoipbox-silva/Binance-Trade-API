@@ -380,6 +380,48 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     }
   });
 
+  // Resetar estatísticas do bot (útil quando dados estão corrompidos)
+  app.post("/api/bots/:id/reset-stats", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const bot = await storage.getBot(id);
+      
+      if (!bot) {
+        return res.status(404).json({ error: "Bot não encontrado" });
+      }
+      
+      // Resetar estatísticas para zero
+      const updatedBot = await storage.updateBot(id, {
+        totalTrades: 0,
+        winningTrades: 0,
+        totalPnl: 0,
+        currentBalance: 0,
+      });
+      
+      // Limpar trades antigos deste bot
+      await storage.clearTradesByBot(id);
+      
+      await storage.addActivity({
+        botId: id,
+        botName: bot.name,
+        symbol: bot.symbol,
+        type: 'analysis',
+        message: 'Estatísticas do robô resetadas. Dados anteriores foram limpos.',
+        buySignals: 0,
+        sellSignals: 0,
+        indicators: [],
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Estatísticas resetadas com sucesso" 
+      });
+    } catch (error: any) {
+      console.error(`[Reset] Erro:`, error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/trades", async (req, res) => {
     try {
       const { botId } = req.query;

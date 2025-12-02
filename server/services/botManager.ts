@@ -580,12 +580,39 @@ export async function getBotWithStats(botId: string): Promise<BotWithStats | nul
   if (indicators.bollingerBands.enabled) activeIndicators.push("Bollinger");
   if (indicators.ema.enabled) activeIndicators.push("EMA");
 
-  const pnlPercent = bot.investment > 0 ? (bot.totalPnl / bot.investment) * 100 : 0;
+  // Buscar trades reais do bot para calcular P&L corretamente
+  const trades = await storage.getAllTrades(botId);
+  const sellTrades = trades.filter(t => t.side === "sell" && t.status === "completed");
+  
+  // Calcular P&L real a partir dos trades de venda (que têm pnl e pnlPercent)
+  let totalPnlFromTrades = 0;
+  let totalPnlPercentSum = 0;
+  
+  for (const trade of sellTrades) {
+    if (trade.pnl !== null && trade.pnl !== undefined) {
+      totalPnlFromTrades += trade.pnl;
+    }
+    if (trade.pnlPercent !== null && trade.pnlPercent !== undefined) {
+      totalPnlPercentSum += trade.pnlPercent;
+    }
+  }
+  
+  // Usar o P&L calculado dos trades reais
+  const realPnl = sellTrades.length > 0 ? totalPnlFromTrades : bot.totalPnl;
+  
+  // Calcular percentual médio de P&L (média dos percentuais de cada trade)
+  const avgPnlPercent = sellTrades.length > 0 ? totalPnlPercentSum / sellTrades.length : 0;
+  
+  // PnL percent em relação ao investimento
+  const pnlPercent = bot.investment > 0 ? (realPnl / bot.investment) * 100 : 0;
   const winRate = bot.totalTrades > 0 ? (bot.winningTrades / bot.totalTrades) * 100 : 0;
-  const avgProfit = bot.totalTrades > 0 ? bot.totalPnl / bot.totalTrades : 0;
+  
+  // Lucro médio por trade (em percentual, não em dólar)
+  const avgProfit = avgPnlPercent;
 
   return {
     ...bot,
+    totalPnl: realPnl,
     pnlPercent,
     winRate,
     avgProfit,
