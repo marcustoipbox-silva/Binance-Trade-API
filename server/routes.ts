@@ -242,6 +242,41 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       
       console.log(`[Sync] Bot ${bot.name}: ${baseAsset} balance = ${balance}`);
       
+      // Verificar se já existe posição aberta
+      const existingPosition = await storage.getOpenPosition(id);
+      
+      // Se tem saldo mas não tem posição, criar trade de compra para registrar
+      if (balance > 0 && !existingPosition) {
+        const currentPrice = await binance.getPrice(bot.symbol);
+        
+        console.log(`[Sync] Criando posição de entrada para ${balance} ${baseAsset} @ ${currentPrice}`);
+        
+        // Criar trade de compra para marcar a posição
+        await storage.createTrade({
+          botId: id,
+          symbol: bot.symbol,
+          side: "buy",
+          type: "MARKET",
+          price: currentPrice,
+          amount: balance,
+          total: balance * currentPrice,
+          indicators: ["SYNC"],
+          binanceOrderId: `sync-${Date.now()}`,
+          status: "completed",
+        });
+        
+        await storage.addActivity({
+          botId: id,
+          botName: bot.name,
+          symbol: bot.symbol,
+          type: 'buy',
+          message: `Posição sincronizada: ${balance} ${baseAsset} @ $${currentPrice.toFixed(4)} (preço atual)`,
+          buySignals: 0,
+          sellSignals: 0,
+          indicators: ["SYNC"],
+        });
+      }
+      
       const updatedBot = await storage.updateBot(id, {
         currentBalance: balance,
       });
