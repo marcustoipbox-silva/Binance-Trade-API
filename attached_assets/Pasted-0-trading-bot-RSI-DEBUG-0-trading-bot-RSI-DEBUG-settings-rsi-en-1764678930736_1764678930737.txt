@@ -1,0 +1,37 @@
+0|trading-bot  | [RSI DEBUG] =====================
+0|trading-bot  | [RSI DEBUG] settings.rsi = {"enabled":true,"period":14,"overbought":70,"oversold":30}
+0|trading-bot  | [RSI DEBUG] overbought = 70 (type: number)
+0|trading-bot  | [RSI DEBUG] oversold = 30 (type: number)
+0|trading-bot  | [RSI DEBUG] lastRSI = 100.00 (type: number)
+0|trading-bot  | [RSI DEBUG] Comparando: RSI=100.00, oversold=30, overbought=70
+0|trading-bot  | [RSI DEBUG] RSI < oversold? 100 < 30 = false
+0|trading-bot  | [RSI DEBUG] RSI > overbought? 100 > 70 = true
+0|trading-bot  | [RSI DEBUG] >>> RESULTADO: SELL
+0|trading-bot  | [Bot Trade PENDLE] Analysis result: overallSignal=sell, buyCount=0, sellCount=1
+0|trading-bot  | [Bot Trade PENDLE] Indicators: 1 ativos, minSignals configurado=1, efetivo=1
+0|trading-bot  | [Bot Trade PENDLE] Signals: RSI=100.00(sell)
+0|trading-bot  | [Bot Trade PENDLE] shouldTrade=true
+0|trading-bot  | [Bot Trade PENDLE] - BUY: 0 sinais >= 1? false
+0|trading-bot  | [Bot Trade PENDLE] - SELL: 1 sinais >= 1? true
+0|trading-bot  | [Bot Trade PENDLE] openPosition=NÃO, currentBalance=1171.1
+0|trading-bot  | [Bot Trade PENDLE] SELL signal mas SEM posição aberta - nada a vender
+0|trading-bot  | [Bot Trade PENDLE] Executing cycle for PENDLE/USDT
+0|trading-bot  | [Bot Trade PENDLE] Indicadores salvos no bot: {"rsi":{"enabled":true,"period":14,"overbought":70,"oversold":30},"macd":{"enabled":false,"fastPeriod":12,"slowPeriod":26,"signalPeriod":9},"bollingerBands":{"enabled":false,"period":20,"stdDev":2},"ema":{"enabled":false,"shortPeriod":12,"longPeriod":26}}
+0|trading-bot  | [Bot Trade PENDLE] Indicadores após validação: {"rsi":{"enabled":true,"period":14,"overbought":70,"oversold":30},"macd":{"enabled":false,"fastPeriod":12,"slowPeriod":26,"signalPeriod":9},"bollingerBands":{"enabled":false,"period":20,"stdDev":2},"ema":{"enabled":false,"shortPeriod":12,"longPeriod":26}}
+0|trading-bot  | [RSI DEBUG] =====================
+0|trading-bot  | [RSI DEBUG] settings.rsi = {"enabled":true,"period":14,"overbought":70,"oversold":30}
+0|trading-bot  | [RSI DEBUG] overbought = 70 (type: number)
+0|trading-bot  | [RSI DEBUG] oversold = 30 (type: number)
+0|trading-bot  | [RSI DEBUG] lastRSI = 100.00 (type: number)
+0|trading-bot  | [RSI DEBUG] Comparando: RSI=100.00, oversold=30, overbought=70
+0|trading-bot  | [RSI DEBUG] RSI < oversold? 100 < 30 = false
+0|trading-bot  | [RSI DEBUG] RSI > overbought? 100 > 70 = true
+0|trading-bot  | [RSI DEBUG] >>> RESULTADO: SELL
+0|trading-bot  | [Bot Trade PENDLE] Analysis result: overallSignal=sell, buyCount=0, sellCount=1
+0|trading-bot  | [Bot Trade PENDLE] Indicators: 1 ativos, minSignals configurado=1, efetivo=1
+0|trading-bot  | [Bot Trade PENDLE] Signals: RSI=100.00(sell)
+0|trading-bot  | [Bot Trade PENDLE] shouldTrade=true
+0|trading-bot  | [Bot Trade PENDLE] - BUY: 0 sinais >= 1? false
+0|trading-bot  | [Bot Trade PENDLE] - SELL: 1 sinais >= 1? true
+0|trading-bot  | [Bot Trade PENDLE] openPosition=NÃO, currentBalance=1171.1
+0|trading-bot  | [Bot Trade PENDLE] SELL signal mas SEM posição aberta - nada a vender
