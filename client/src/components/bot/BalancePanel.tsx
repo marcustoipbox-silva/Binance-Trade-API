@@ -44,8 +44,14 @@ export function BalancePanel() {
     .map(bot => bot.symbol.split('/')[0])
     .filter((asset, index, arr) => arr.indexOf(asset) === index);
 
-  const mainAssets = ["USDT", "BTC", "ETH", "BNB", ...tradedAssets];
-  const sortedBalances = [...balances].sort((a, b) => {
+  const mainAssets = ["USDT", ...tradedAssets, "BTC", "ETH", "BNB"];
+  
+  // Filtrar apenas ativos importantes (main + com saldo > 0)
+  const importantBalances = balances.filter(b => 
+    mainAssets.includes(b.asset) || (b.free + b.locked) > 0.001
+  );
+  
+  const sortedBalances = [...importantBalances].sort((a, b) => {
     const aIndex = mainAssets.indexOf(a.asset);
     const bIndex = mainAssets.indexOf(b.asset);
     if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
@@ -54,7 +60,8 @@ export function BalancePanel() {
     return (b.free + b.locked) - (a.free + a.locked);
   });
 
-  const displayBalances = sortedBalances.slice(0, 10);
+  // Mostrar até 15 ativos, priorizando os negociados
+  const displayBalances = sortedBalances.slice(0, 15);
 
   return (
     <Card data-testid="card-balance-panel">

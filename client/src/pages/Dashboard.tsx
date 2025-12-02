@@ -97,6 +97,24 @@ export default function Dashboard() {
     },
   });
 
+  const syncBalanceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/bots/${id}/sync-balance`);
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/binance/balance"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({ 
+        title: "Saldo sincronizado!", 
+        description: data.message || "O saldo foi atualizado com a Binance." 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro ao sincronizar", description: error.message, variant: "destructive" });
+    },
+  });
+
   const createBotMutation = useMutation({
     mutationFn: async (config: any) => {
       return apiRequest("POST", "/api/bots", config);
@@ -216,6 +234,8 @@ export default function Dashboard() {
                   onStart={(id) => startBotMutation.mutate(id)}
                   onPause={(id) => pauseBotMutation.mutate(id)}
                   onStop={(id) => stopBotMutation.mutate(id)}
+                  onSync={(id) => syncBalanceMutation.mutate(id)}
+                  isSyncing={syncBalanceMutation.isPending}
                   onConfigure={(id) => {
                     setEditBotId(id);
                     setEditModalOpen(true);
