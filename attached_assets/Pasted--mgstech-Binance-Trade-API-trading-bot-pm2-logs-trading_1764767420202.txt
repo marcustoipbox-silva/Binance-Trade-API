@@ -1,0 +1,32 @@
+
+mgstech@Binance-Trade-API:~/trading-bot$ pm2 logs trading-bot --lines 20
+[TAILING] Tailing last 20 lines for [trading-bot] process (change the value with --lines option)
+/home/mgstech/.pm2/logs/trading-bot-error-0.log last 20 lines:
+0|trading- |     'x-frame-options': 'SAMEORIGIN',
+0|trading- |     'x-webkit-csp': "default-src 'self'",
+0|trading- |     'x-cache': 'Error from cloudfront',
+0|trading- |     via: '1.1 9339a228d9a10d6d3e55cbba0af294b4.cloudfront.net (CloudFront)',
+0|trading- |     'x-amz-cf-pop': 'GRU3-P12',
+0|trading- |     'x-amz-cf-id': '2k1kEpLnLDJUVAWNDnU2uXYu3D5MFA0s2IhyZFphYGnZ9MWy76CTIg=='
+0|trading- |   },
+0|trading- |   requestUrl: 'https://testnet.binance.vision/api/v3/order?symbol=PENDLEUSDT&side=SELL&type=MARKET&quantity=1171.1&newClientOrderId=x-U5D79M5BleuCmBYFLUAfGGBw2kuf2U&timestamp=1764680452717&recvWindow=5000&signature=f8b16ded75e8453fc0ee14f74ace205dad3e3cbc70d267f3319f8f8cef9761a8',
+0|trading- |   requestBody: undefined,
+0|trading- |   requestOptions: {
+0|trading- |     recvWindow: 5000,
+0|trading- |     syncIntervalMs: 3600000,
+0|trading- |     strictParamValidation: false,
+0|trading- |     disableTimeSync: true,
+0|trading- |     api_key: undefined,
+0|trading- |     api_secret: undefined,
+0|trading- |     testnet: true
+0|trading- |   }
+0|trading- | }
+0|trading- | [Bot Trade PENDLE] Stop loss failed: Account has insufficient balance for requested action.
+
+/home/mgstech/.pm2/logs/trading-bot-out-0.log last 20 lines:
+0|trading- | free":4236,"locked":0},{"asset":"SAHARA","free":6514,"locked":0},{"asset":"LA","free":1433,"locked":0},{"asset":"ERA","free":1604,"locked":0},{"asset":"C","free":5781,"locked":0},{"asset":"TREE","free":3362,"locked":0},{"asset":"A2Z","free":18446,"locked":0},{"asset":"TOWNS","free":18446,"locked":0},{"asset":"PROVE","free":887,"locked":0},{"asset":"BFUSD","free":499,"locked":0},{"asset":"PLUME","free":9781,"locked":0},{"asset":"DOLO","free":7737,"locked":0},{"asset":"MITO","free":5773,"locked":0},{"asset":"WLFI","free":4266,"locked":0},{"asset":"SOMI","free":1418,"locked":0},{"asset":"OPEN","free":1743,"locked":0},{"asset":"USDE","free":500,"locked":0},{"asset":"LINEA","free":18446,"locked":0},{"asset":"HOLO","free":4725,"locked":0},{"asset":"PUMP","free":18446,"locked":0},{"asset":"AVNT","free":953,"locked":0},{"asset":"ZKC","free":2673,"locked":0},{"asset":"SKY","free":9650,"locked":0},{"asset":"BARD","free":714,"locked":0},{"asset":"0G","free":456,"locked":0},{"asset":"HEMI","free":14662,"locked":0},{"asset":"XPL","free":1710,"locked":0},{"asset":"MIRA","free":2425,"locked":0},{"asset":"FF","free":4228,"locked":0},{"asset":"EDEN","free":4693,"locked":0},{"asset":"NOM","free":18446,"locked":0},{"asset":"2Z","free":3222,"locked":0},{"asset":"MORPHO","free":305,"locked":0},{"asset":"ASTER","free":477,"locked":0},{"asset":"WAL","free":2262,"locked":0},{"asset":"EUL","free":79,"locked":0},{"asset":"ENSO","free":458,"locked":0},{"asset":"YB","free":926,"locked":0},{"asset":"ZBT","free":3290,"locked":0},{"asset":"TURTLE","free":4925,"locked":0},{"asset":"GIGGLE","free":3,"locked":0},{"asset":"F","free":18446,"locked":0},{"asset":"KITE","free":5960,"locked":0},{"asset":"MMT","free":430,"locked":0}]
+0|trading- | 1:03:12 PM [express] GET /api/activities 304 in 2ms :: [{"botId":"4717e54e-ded9-4fad-bf82-9a41c22ebffd","botName":"Trade PENDLE","symbol":"PENDLE/USDT","type":"analysis","message":"Saldo sincronizado: 376.90 PENDLE (preço médio compra: $2.5504)","buySignals":0,"sellSignals":0,"indicators":[],"id":"58b20aa5-2c7a-47c5-a8ea-a9c16e74dfb7","timestamp":"2025-12-03T13:00:23.291Z"},{"botId":"4717e54e-ded9-4fad-bf82-9a41c22ebffd","botName":"Trade PENDLE","symbol":"PENDLE/USDT","type":"buy","message":"Trade REAL sincronizado: 7.30 PENDLE @ $3.5410 (ordem: 550290)","buySignals":0,"sellSignals":0,"indicators":["SYNC-REAL"],"id":"2b1d42aa-4600-4afb-93aa-6b006b7394e5","timestamp":"2025-12-03T13:00:23.291Z"}]
+0|trading- | 1:03:13 PM [express] GET /api/bots 304 in 3ms :: [{"id":"4717e54e-ded9-4fad-bf82-9a41c22ebffd","name":"Trade PENDLE","symbol":"PENDLE/USDT","status":"stopped","investment":4000,"currentBalance":376.9,"stopLoss":2,"takeProfit":10,"minSignals":1,"interval":"1m","indicators":{"rsi":{"enabled":true,"period":14,"overbought":70,"oversold":30},"macd":{"enabled":false,"fastPeriod":12,"slowPeriod":26,"signalPeriod":9},"bollingerBands":{"enabled":false,"period":20,"stdDev":2},"ema":{"enabled":false,"shortPeriod":12,"longPeriod":26}},"totalTrades":0,"winningTrades":0,"totalPnl":0,"lastSignal":null,"lastSignalTime":null,"createdAt":"2025-12-03T13:00:12.040Z","updatedAt":"2025-12-03T13:00:23.291Z","pnlPercent":0,"winRate":0,"avgProfit":0,"activeIndicators":["RSI"]}]
+0|trading- | 1:03:15 PM [express] GET /api/activities 304 in 1ms :: [{"botId":"4717e54e-ded9-4fad-bf82-9a41c22ebffd","botName":"Trade PENDLE","symbol":"PENDLE/USDT","type":"analysis","message":"Saldo sincronizado: 376.90 PENDLE (preço médio compra: $2.5504)","buySignals":0,"sellSignals":0,"indicators":[],"id":"58b20aa5-2c7a-47c5-a8ea-a9c16e74dfb7","timestamp":"2025-12-03T13:00:23.291Z"},{"botId":"4717e54e-ded9-4fad-bf82-9a41c22ebffd","botName":"Trade PENDLE","symbol":"PENDLE/USDT","type":"buy","message":"Trade REAL sincronizado: 7.30 PENDLE @ $3.5410 (ordem: 550290)","buySignals":0,"sellSignals":0,"indicators":["SYNC-REAL"],"id":"2b1d42aa-4600-4afb-93aa-6b006b7394e5","timestamp":"2025-12-03T13:00:23.291Z"}]
+0|trading- | [Storage] Usando MemStorage (DATABASE_URL não encontrada)
+0|trading- | 1:09:36 PM [express] serving on port 5000
