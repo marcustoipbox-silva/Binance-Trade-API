@@ -310,8 +310,11 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
         }
       }
       
+      // Atualizar bot com saldo e preço médio REAIS da Binance
       const updatedBot = await storage.updateBot(id, {
         currentBalance: position.balance,
+        avgEntryPrice: position.avgBuyPrice,
+        investedAmount: position.balance * position.avgBuyPrice,
       });
       
       await storage.addActivity({
@@ -319,7 +322,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
         botName: bot.name,
         symbol: bot.symbol,
         type: 'analysis',
-        message: `Saldo sincronizado: ${position.balance.toFixed(2)} ${baseAsset} (preço médio compra: $${position.avgBuyPrice.toFixed(4)})`,
+        message: `Saldo sincronizado com dados REAIS: ${position.balance.toFixed(2)} ${baseAsset} (preço médio compra: $${position.avgBuyPrice.toFixed(4)})`,
         buySignals: 0,
         sellSignals: 0,
         indicators: [],
@@ -329,6 +332,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
         success: true, 
         balance: position.balance,
         avgBuyPrice: position.avgBuyPrice,
+        investedAmount: position.balance * position.avgBuyPrice,
         message: `Sincronizado: ${position.balance.toFixed(2)} ${baseAsset} @ $${position.avgBuyPrice.toFixed(4)}` 
       });
     } catch (error: any) {
