@@ -332,13 +332,138 @@ sudo ufw enable
 
 ---
 
+## Parte 8: Auto-Sync (IMPORTANTE!)
+
+Esta configuração faz a VM **atualizar automaticamente** quando você faz mudanças no Replit.
+
+### 8.1 Criar Script de Deploy Automático
+
+Na VM, execute:
+
+```bash
+nano ~/auto-deploy.sh
+```
+
+Cole este conteúdo:
+
+```bash
+#!/bin/bash
+# Script de auto-deploy para Trading Bot
+# Verifica atualizações a cada execução
+
+cd ~/trading-bot
+
+# Buscar atualizações do repositório
+git fetch --quiet origin main 2>/dev/null
+
+# Verificar se há commits novos
+LOCAL=$(git rev-parse HEAD 2>/dev/null)
+REMOTE=$(git rev-parse origin/main 2>/dev/null)
+
+if [ "$LOCAL" != "$REMOTE" ]; then
+    echo "$(date): Atualizações encontradas! Aplicando..."
+    
+    # Baixar mudanças
+    git pull --ff-only origin main
+    
+    # Instalar dependências novas (se houver)
+    npm install --silent
+    
+    # Rebuild do projeto
+    npm run build
+    
+    # Reiniciar aplicação
+    pm2 reload ecosystem.config.cjs || pm2 restart all
+    
+    echo "$(date): Deploy concluído com sucesso!"
+else
+    echo "$(date): Nenhuma atualização disponível."
+fi
+```
+
+Salve com `Ctrl+X`, depois `Y`, depois `Enter`.
+
+### 8.2 Tornar o Script Executável
+
+```bash
+chmod +x ~/auto-deploy.sh
+```
+
+### 8.3 Testar o Script
+
+```bash
+~/auto-deploy.sh
+```
+
+Deve mostrar: `Nenhuma atualização disponível.` (se já estiver atualizado)
+
+### 8.4 Configurar Execução Automática (Cron)
+
+```bash
+crontab -e
+```
+
+Se perguntar qual editor, escolha `1` (nano).
+
+Adicione esta linha **no final** do arquivo:
+
+```
+*/2 * * * * /home/SEU_USUARIO/auto-deploy.sh >> /home/SEU_USUARIO/deploy.log 2>&1
+```
+
+⚠️ **IMPORTANTE:** Substitua `SEU_USUARIO` pelo seu usuário real (ex: `ubuntu`, `admin`, etc.)
+
+Para descobrir seu usuário:
+```bash
+whoami
+```
+
+Salve com `Ctrl+X`, depois `Y`, depois `Enter`.
+
+### 8.5 Verificar que o Cron Está Funcionando
+
+```bash
+# Ver jobs agendados
+crontab -l
+
+# Monitorar o log de deploy
+tail -f ~/deploy.log
+```
+
+### 8.6 Como Funciona
+
+- A cada **2 minutos**, a VM verifica se há commits novos
+- Se houver atualizações:
+  1. Baixa as mudanças (`git pull`)
+  2. Instala dependências novas (`npm install`)
+  3. Faz o build (`npm run build`)
+  4. Reinicia a aplicação (`pm2 reload`)
+- Todas as ações são registradas em `~/deploy.log`
+
+### 8.7 Verificar Atualizações Manualmente
+
+Se quiser forçar uma atualização imediata:
+
+```bash
+~/auto-deploy.sh
+```
+
+Ou ver o que aconteceu recentemente:
+
+```bash
+tail -50 ~/deploy.log
+```
+
+---
+
 ## Próximos Passos
 
 1. ✅ Configure a VM seguindo este guia
-2. ✅ Conecte à Binance Testnet
-3. ✅ Crie um robô de teste com valor pequeno
-4. ✅ Monitore a execução e verifique os trades
-5. ✅ Ajuste os indicadores conforme necessário
+2. ✅ Configure o Auto-Sync (Parte 8)
+3. ✅ Conecte à Binance Testnet
+4. ✅ Crie um robô de teste com valor pequeno
+5. ✅ Monitore a execução e verifique os trades
+6. ✅ Ajuste os indicadores conforme necessário
 
 ---
 
