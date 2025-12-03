@@ -503,8 +503,7 @@ async function checkDCAOpportunity(botId: string, bot: Bot, currentPrice: number
     return;
   }
   
-  const usdtBalance = await binance.getAssetBalance("USDT");
-  const availableBalance = usdtBalance?.free || 0;
+  const availableBalance = await binance.getAssetBalance("USDT");
   
   if (availableBalance < symbolInfo.minNotional) {
     console.log(`[Bot ${bot.name}] DCA: Saldo USDT insuficiente ($${availableBalance.toFixed(2)})`);
@@ -664,8 +663,7 @@ async function checkBuyConditions(botId: string, bot: Bot, currentPrice: number,
   
   quantity = binance.formatQuantity(quantity, symbolInfo.stepSize);
   
-  const usdtBalance = await binance.getAssetBalance("USDT");
-  const availableBalance = usdtBalance?.free || 0;
+  const availableBalance = await binance.getAssetBalance("USDT");
   
   if (availableBalance < investmentAmount) {
     console.log(`[Bot ${bot.name}] Saldo USDT insuficiente: $${availableBalance.toFixed(2)} < $${investmentAmount.toFixed(2)}`);
