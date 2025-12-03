@@ -190,6 +190,25 @@ export async function getCandles(
   }
 }
 
+// Resultado da execução de ordem com dados reais
+export interface OrderExecutionResult {
+  orderId: string;
+  symbol: string;
+  side: "BUY" | "SELL";
+  executedQty: number;      // Quantidade executada
+  cummulativeQuoteQty: number; // Valor total em USDT
+  avgPrice: number;         // Preço médio de execução
+  fills: Array<{
+    price: number;
+    qty: number;
+    commission: number;
+    commissionAsset: string;
+  }>;
+  status: string;
+  transactTime: Date;
+}
+
+// DEPRECATED: Use executeMarketOrder() instead for accurate execution data
 export async function placeMarketOrder(
   symbol: string,
   side: "BUY" | "SELL",
@@ -201,16 +220,107 @@ export async function placeMarketOrder(
 
   try {
     const formattedSymbol = symbol.replace("/", "");
+    // Também usar FULL response type para garantir dados completos
     const order = await mainClient.submitNewOrder({
       symbol: formattedSymbol,
       side: side as OrderSide,
       type: "MARKET" as OrderType,
       quantity: quantity,
+      newOrderRespType: "FULL",
     });
     
     return order;
   } catch (error: any) {
     console.error("Error placing market order:", error);
+    throw new Error(error.message || "Falha ao executar ordem");
+  }
+}
+
+// Executar ordem de mercado e retornar dados REAIS de execução
+export async function executeMarketOrder(
+  symbol: string,
+  side: "BUY" | "SELL",
+  quantity: number
+): Promise<OrderExecutionResult> {
+  if (!mainClient) {
+    throw new Error("Cliente Binance não inicializado");
+  }
+
+  try {
+    const formattedSymbol = symbol.replace("/", "");
+    
+    // IMPORTANTE: Solicitar resposta FULL para obter todos os dados de execução
+    const order = await mainClient.submitNewOrder({
+      symbol: formattedSymbol,
+      side: side as OrderSide,
+      type: "MARKET" as OrderType,
+      quantity: quantity,
+      newOrderRespType: "FULL",  // Garante que recebemos fills, executedQty, etc.
+    });
+    
+    // Cast para any para acessar todas as propriedades da resposta
+    const orderData = order as any;
+    
+    // Extrair dados reais da execução
+    let executedQty = parseFloat(String(orderData.executedQty || 0));
+    let cummulativeQuoteQty = parseFloat(String(orderData.cummulativeQuoteQty || 0));
+    
+    // Calcular preço médio a partir dos fills (mais preciso)
+    let avgPrice = 0;
+    if (orderData.fills && orderData.fills.length > 0) {
+      let totalQty = 0;
+      let totalValue = 0;
+      for (const fill of orderData.fills) {
+        const fillQty = parseFloat(String(fill.qty));
+        const fillPrice = parseFloat(String(fill.price));
+        totalQty += fillQty;
+        totalValue += fillQty * fillPrice;
+      }
+      avgPrice = totalQty > 0 ? totalValue / totalQty : 0;
+      
+      // Se fills existem mas executedQty veio zerado, usar valor dos fills
+      if (executedQty <= 0) {
+        executedQty = totalQty;
+      }
+      if (cummulativeQuoteQty <= 0) {
+        cummulativeQuoteQty = totalValue;
+      }
+    } else if (executedQty > 0 && cummulativeQuoteQty > 0) {
+      avgPrice = cummulativeQuoteQty / executedQty;
+    }
+    
+    // VALIDAÇÃO: Se ainda não temos dados válidos, erro
+    if (executedQty <= 0 || avgPrice <= 0) {
+      console.error(`[Binance] Ordem executada mas dados incompletos: qty=${executedQty}, price=${avgPrice}`);
+      console.error(`[Binance] Response completa:`, JSON.stringify(orderData, null, 2));
+      throw new Error(`Ordem executada mas dados de preço/quantidade inválidos. Verifique o histórico na Binance.`);
+    }
+    
+    // Processar fills (preenchimentos parciais)
+    const fills = (orderData.fills || []).map((f: any) => ({
+      price: parseFloat(String(f.price)),
+      qty: parseFloat(String(f.qty)),
+      commission: parseFloat(String(f.commission || 0)),
+      commissionAsset: f.commissionAsset || "",
+    }));
+    
+    const result: OrderExecutionResult = {
+      orderId: String(orderData.orderId),
+      symbol: formattedSymbol,
+      side: side,
+      executedQty,
+      cummulativeQuoteQty,
+      avgPrice,
+      fills,
+      status: orderData.status || "FILLED",
+      transactTime: new Date(orderData.transactTime || Date.now()),
+    };
+    
+    console.log(`[Binance] Order executed: ${side} ${executedQty.toFixed(4)} ${symbol} @ avg price $${avgPrice.toFixed(4)} (total: $${cummulativeQuoteQty.toFixed(2)})`);
+    
+    return result;
+  } catch (error: any) {
+    console.error("Error executing market order:", error);
     throw new Error(error.message || "Falha ao executar ordem");
   }
 }

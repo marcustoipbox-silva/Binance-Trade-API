@@ -401,13 +401,20 @@ async function executeSell(
   const quantity = binance.formatQuantity(bot.currentBalance, symbolInfo.stepSize);
   const avgEntryPrice = bot.avgEntryPrice || 0;
   
-  console.log(`[Bot ${bot.name}] Executando VENDA: ${quantity} @ $${currentPrice.toFixed(4)} | Motivo: ${getSellReasonLabel(reason)}`);
+  console.log(`[Bot ${bot.name}] Executando VENDA: ${quantity} | Motivo: ${getSellReasonLabel(reason)}`);
   
   try {
-    const order = await binance.placeMarketOrder(bot.symbol, "SELL", quantity);
+    // Usar executeMarketOrder para obter preço REAL de execução
+    const orderResult = await binance.executeMarketOrder(bot.symbol, "SELL", quantity);
     
-    const pnl = (currentPrice - avgEntryPrice) * quantity;
-    const pnlPercent = avgEntryPrice > 0 ? ((currentPrice - avgEntryPrice) / avgEntryPrice) * 100 : 0;
+    // Usar preço médio REAL da execução (não o ticker)
+    const realPrice = orderResult.avgPrice;
+    const realQuantity = orderResult.executedQty;
+    const realTotal = orderResult.cummulativeQuoteQty;
+    
+    // Calcular P&L com preço REAL de venda
+    const pnl = (realPrice - avgEntryPrice) * realQuantity;
+    const pnlPercent = avgEntryPrice > 0 ? ((realPrice - avgEntryPrice) / avgEntryPrice) * 100 : 0;
     
     const tradeIndicators = reason === "INDICATOR_OVERBOUGHT" ? indicatorNames : [reason];
     
@@ -416,13 +423,13 @@ async function executeSell(
       symbol: bot.symbol,
       side: "sell",
       type: "MARKET",
-      price: currentPrice,
-      amount: quantity,
-      total: quantity * currentPrice,
+      price: realPrice,  // PREÇO REAL da Binance
+      amount: realQuantity,  // QUANTIDADE REAL executada
+      total: realTotal,  // TOTAL REAL em USDT
       pnl,
       pnlPercent,
       indicators: tradeIndicators,
-      binanceOrderId: order.orderId?.toString(),
+      binanceOrderId: orderResult.orderId,
       status: "completed",
     };
     
@@ -450,13 +457,13 @@ async function executeSell(
       botName: bot.name,
       symbol: bot.symbol,
       type: 'sell',
-      message: `VENDA executada (${reasonLabel}): ${quantity} @ $${currentPrice.toFixed(4)} | P&L: ${pnlSign}$${pnl.toFixed(2)} (${pnlSign}${pnlPercent.toFixed(2)}%)`,
+      message: `VENDA executada (${reasonLabel}): ${realQuantity.toFixed(4)} @ $${realPrice.toFixed(4)} = $${realTotal.toFixed(2)} | P&L: ${pnlSign}$${pnl.toFixed(2)} (${pnlSign}${pnlPercent.toFixed(2)}%)`,
       buySignals: 0,
       sellSignals: 1,
       indicators: tradeIndicators,
     });
     
-    console.log(`[Bot ${bot.name}] ✅ VENDA executada: Order ${order.orderId}, P&L: ${pnlSign}$${pnl.toFixed(2)} (${reasonLabel})`);
+    console.log(`[Bot ${bot.name}] ✅ VENDA executada: Order ${orderResult.orderId}, Preço real: $${realPrice.toFixed(4)}, P&L: ${pnlSign}$${pnl.toFixed(2)} (${reasonLabel})`);
     
   } catch (error: any) {
     console.error(`[Bot ${bot.name}] ❌ Erro na VENDA:`, error.message);
@@ -529,29 +536,35 @@ async function checkDCAOpportunity(botId: string, bot: Bot, currentPrice: number
   let quantity = investAmount / currentPrice;
   quantity = binance.formatQuantity(quantity, symbolInfo.stepSize);
   
-  console.log(`[Bot ${bot.name}] DCA: Comprando mais ${quantity} @ $${currentPrice.toFixed(4)} ($${investAmount.toFixed(2)})`);
+  console.log(`[Bot ${bot.name}] DCA: Comprando mais ${quantity}`);
   
   try {
-    const order = await binance.placeMarketOrder(bot.symbol, "BUY", quantity);
+    // Usar executeMarketOrder para obter preço REAL de execução
+    const orderResult = await binance.executeMarketOrder(bot.symbol, "BUY", quantity);
+    
+    // Usar dados REAIS da execução
+    const realPrice = orderResult.avgPrice;
+    const realQuantity = orderResult.executedQty;
+    const realTotal = orderResult.cummulativeQuoteQty;
     
     const oldBalance = bot.currentBalance || 0;
     const oldInvested = bot.investedAmount || 0;
     const oldAvgPrice = bot.avgEntryPrice || 0;
     
-    const newBalance = oldBalance + quantity;
-    const newInvested = oldInvested + investAmount;
-    const newAvgPrice = (oldAvgPrice * oldBalance + currentPrice * quantity) / newBalance;
+    const newBalance = oldBalance + realQuantity;
+    const newInvested = oldInvested + realTotal;
+    const newAvgPrice = (oldAvgPrice * oldBalance + realPrice * realQuantity) / newBalance;
     
     const trade: InsertTrade = {
       botId,
       symbol: bot.symbol,
       side: "buy",
       type: "MARKET",
-      price: currentPrice,
-      amount: quantity,
-      total: investAmount,
+      price: realPrice,  // PREÇO REAL da Binance
+      amount: realQuantity,  // QUANTIDADE REAL executada
+      total: realTotal,  // TOTAL REAL em USDT
       indicators: analysis.signals.filter(s => s.signal === "buy").map(s => s.name),
-      binanceOrderId: order.orderId?.toString(),
+      binanceOrderId: orderResult.orderId,
       status: "completed",
     };
     
@@ -568,13 +581,13 @@ async function checkDCAOpportunity(botId: string, bot: Bot, currentPrice: number
       botName: bot.name,
       symbol: bot.symbol,
       type: 'buy',
-      message: `DCA: COMPRA adicional ${quantity} @ $${currentPrice.toFixed(4)} = $${investAmount.toFixed(2)} | Total investido: $${newInvested.toFixed(2)} | Novo preço médio: $${newAvgPrice.toFixed(4)}`,
+      message: `DCA: COMPRA adicional ${realQuantity.toFixed(4)} @ $${realPrice.toFixed(4)} = $${realTotal.toFixed(2)} | Total investido: $${newInvested.toFixed(2)} | Novo preço médio: $${newAvgPrice.toFixed(4)}`,
       buySignals: analysis.buyCount,
       sellSignals: analysis.sellCount,
       indicators: analysis.signals.filter(s => s.signal === "buy").map(s => s.name),
     });
     
-    console.log(`[Bot ${bot.name}] ✅ DCA executado: Order ${order.orderId}, Novo preço médio: $${newAvgPrice.toFixed(4)}`);
+    console.log(`[Bot ${bot.name}] ✅ DCA executado: Order ${orderResult.orderId}, Preço real: $${realPrice.toFixed(4)}, Novo preço médio: $${newAvgPrice.toFixed(4)}`);
     
   } catch (error: any) {
     console.error(`[Bot ${bot.name}] ❌ Erro no DCA:`, error.message);
@@ -686,33 +699,38 @@ async function checkBuyConditions(botId: string, bot: Bot, currentPrice: number,
     }
   }
   
-  console.log(`[Bot ${bot.name}] Executando COMPRA: ${quantity} @ $${currentPrice.toFixed(4)}`);
+  console.log(`[Bot ${bot.name}] Executando COMPRA: ${quantity}`);
   
   try {
-    const order = await binance.placeMarketOrder(bot.symbol, "BUY", quantity);
-    const totalInvested = quantity * currentPrice;
+    // Usar executeMarketOrder para obter preço REAL de execução
+    const orderResult = await binance.executeMarketOrder(bot.symbol, "BUY", quantity);
+    
+    // Usar dados REAIS da execução
+    const realPrice = orderResult.avgPrice;
+    const realQuantity = orderResult.executedQty;
+    const realTotal = orderResult.cummulativeQuoteQty;
     
     const trade: InsertTrade = {
       botId,
       symbol: bot.symbol,
       side: "buy",
       type: "MARKET",
-      price: currentPrice,
-      amount: quantity,
-      total: totalInvested,
+      price: realPrice,  // PREÇO REAL da Binance
+      amount: realQuantity,  // QUANTIDADE REAL executada
+      total: realTotal,  // TOTAL REAL em USDT
       indicators: analysis.signals.filter(s => s.signal === "buy").map(s => s.name),
-      binanceOrderId: order.orderId?.toString(),
+      binanceOrderId: orderResult.orderId,
       status: "completed",
     };
     
     await storage.createTrade(trade);
     await storage.updateBot(botId, {
       totalTrades: bot.totalTrades + 1,
-      currentBalance: quantity,
-      investedAmount: totalInvested,
-      avgEntryPrice: currentPrice,
-      highestPrice: currentPrice,
-      trailingStopPrice: bot.trailingStopPercent > 0 ? currentPrice * (1 - bot.trailingStopPercent / 100) : null,
+      currentBalance: realQuantity,
+      investedAmount: realTotal,
+      avgEntryPrice: realPrice,
+      highestPrice: realPrice,
+      trailingStopPrice: bot.trailingStopPercent > 0 ? realPrice * (1 - bot.trailingStopPercent / 100) : null,
     });
     
     await storage.addActivity({
@@ -720,13 +738,13 @@ async function checkBuyConditions(botId: string, bot: Bot, currentPrice: number,
       botName: bot.name,
       symbol: bot.symbol,
       type: 'buy',
-      message: `COMPRA executada: ${quantity} @ $${currentPrice.toFixed(4)} = $${totalInvested.toFixed(2)}`,
+      message: `COMPRA executada: ${realQuantity.toFixed(4)} @ $${realPrice.toFixed(4)} = $${realTotal.toFixed(2)}`,
       buySignals: analysis.buyCount,
       sellSignals: analysis.sellCount,
       indicators: activeIndicatorDetails,
     });
     
-    console.log(`[Bot ${bot.name}] ✅ COMPRA executada: Order ${order.orderId}`);
+    console.log(`[Bot ${bot.name}] ✅ COMPRA executada: Order ${orderResult.orderId}, Preço real: $${realPrice.toFixed(4)}`);
     
   } catch (error: any) {
     console.error(`[Bot ${bot.name}] ❌ Erro na COMPRA:`, error.message);
