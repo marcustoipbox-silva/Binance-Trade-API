@@ -24,6 +24,8 @@ export interface BotConfig {
   investment: number;
   stopLoss: number;
   takeProfit: number;
+  trailingStopPercent: number;
+  cooldownMinutes: number;
   indicators: IndicatorSettings;
   minSignals: number;
   interval: string;
@@ -51,6 +53,8 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
     investment: 100,
     stopLoss: 5,
     takeProfit: 10,
+    trailingStopPercent: 0,
+    cooldownMinutes: 5,
     indicators: defaultIndicators,
     minSignals: 2,
     interval: "1h",
@@ -95,6 +99,8 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
         investment: 100,
         stopLoss: 5,
         takeProfit: 10,
+        trailingStopPercent: 0,
+        cooldownMinutes: 5,
         indicators: defaultIndicators,
         minSignals: 2,
         interval: "1h",
@@ -314,6 +320,44 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="trailingStop">Trailing Stop (%)</Label>
+                <Input
+                  id="trailingStop"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={config.trailingStopPercent}
+                  onChange={(e) => setConfig({ ...config, trailingStopPercent: parseFloat(e.target.value) || 0 })}
+                  className="font-mono"
+                  data-testid="input-trailing-stop"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {config.trailingStopPercent > 0 
+                    ? `Protege lucros: vende se cair ${config.trailingStopPercent}% do máximo`
+                    : "0 = desativado"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cooldown">Cooldown (minutos)</Label>
+                <Input
+                  id="cooldown"
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={config.cooldownMinutes}
+                  onChange={(e) => setConfig({ ...config, cooldownMinutes: parseInt(e.target.value) || 0 })}
+                  className="font-mono"
+                  data-testid="input-cooldown"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Aguarda {config.cooldownMinutes} min após venda antes de comprar
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Sinais Mínimos para Operar</Label>
               <Select 
@@ -335,6 +379,16 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
               </p>
             </div>
 
+            <div className="p-3 rounded-lg bg-muted/50">
+              <p className="text-sm font-medium mb-2">Prioridade de Venda:</p>
+              <ol className="text-xs text-muted-foreground list-decimal list-inside space-y-1">
+                <li>Stop Loss (proteção contra perdas)</li>
+                <li>Take Profit (realização de lucros)</li>
+                <li>Trailing Stop (proteção de lucros em alta)</li>
+                <li>Indicadores de sobrecompra (RSI, etc.)</li>
+              </ol>
+            </div>
+
             <div className="p-4 rounded-lg border bg-card mt-4">
               <h4 className="font-semibold mb-2 flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-primary" />
@@ -347,6 +401,8 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
                 <div><span className="text-muted-foreground">Intervalo:</span> {config.interval}</div>
                 <div><span className="text-muted-foreground">Stop Loss:</span> {config.stopLoss}%</div>
                 <div><span className="text-muted-foreground">Take Profit:</span> {config.takeProfit}%</div>
+                <div><span className="text-muted-foreground">Trailing Stop:</span> {config.trailingStopPercent > 0 ? `${config.trailingStopPercent}%` : "Desativado"}</div>
+                <div><span className="text-muted-foreground">Cooldown:</span> {config.cooldownMinutes} min</div>
                 <div><span className="text-muted-foreground">Indicadores:</span> {enabledIndicatorsCount} ativos</div>
                 <div><span className="text-muted-foreground">Sinais Mínimos:</span> {config.minSignals}</div>
               </div>
