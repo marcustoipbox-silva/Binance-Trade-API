@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -49,14 +49,32 @@ interface GroupedTrades {
 }
 
 export function TradeHistoryModal({ open, onOpenChange, botId, botName }: TradeHistoryModalProps) {
-  const [selectedBot, setSelectedBot] = useState<string>(botId || "all");
+  const [userSelectedBot, setUserSelectedBot] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (!open) {
+      setUserSelectedBot(null);
+    }
+  }, [open]);
 
-  const tradesQueryKey = selectedBot && selectedBot !== "all" 
-    ? `/api/trades?botId=${selectedBot}` 
-    : '/api/trades';
-    
+  useEffect(() => {
+    if (botId) {
+      setUserSelectedBot(null);
+    }
+  }, [botId]);
+
+  const effectiveBot = botId ?? userSelectedBot ?? "all";
+
   const { data: trades = [], isLoading } = useQuery<Trade[]>({
-    queryKey: [tradesQueryKey],
+    queryKey: ['/api/trades', effectiveBot],
+    queryFn: async () => {
+      const url = effectiveBot && effectiveBot !== "all" 
+        ? `/api/trades?botId=${effectiveBot}` 
+        : '/api/trades';
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) throw new Error('Erro ao carregar trades');
+      return res.json();
+    },
     enabled: open,
   });
 
@@ -138,7 +156,7 @@ export function TradeHistoryModal({ open, onOpenChange, botId, botName }: TradeH
         {!botId && bots.length > 0 && (
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={selectedBot} onValueChange={setSelectedBot}>
+            <Select value={effectiveBot} onValueChange={setUserSelectedBot}>
               <SelectTrigger className="w-48" data-testid="select-filter-bot">
                 <SelectValue placeholder="Filtrar por robô" />
               </SelectTrigger>
