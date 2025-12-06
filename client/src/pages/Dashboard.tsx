@@ -7,6 +7,7 @@ import { BalancePanel } from "@/components/bot/BalancePanel";
 import { ActivityLog } from "@/components/bot/ActivityLog";
 import { CreateBotModal } from "@/components/bot/CreateBotModal";
 import { EditBotModal } from "@/components/bot/EditBotModal";
+import { TradeHistoryModal } from "@/components/bot/TradeHistoryModal";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -39,6 +40,15 @@ export default function Dashboard() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editBotId, setEditBotId] = useState<string | null>(null);
+  const [tradeHistoryOpen, setTradeHistoryOpen] = useState(false);
+  const [tradeHistoryBotId, setTradeHistoryBotId] = useState<string | undefined>();
+  const [tradeHistoryBotName, setTradeHistoryBotName] = useState<string | undefined>();
+
+  const openTradeHistory = (botId?: string, botName?: string) => {
+    setTradeHistoryBotId(botId);
+    setTradeHistoryBotName(botName);
+    setTradeHistoryOpen(true);
+  };
 
   const { data: connectionStatus } = useQuery<{ connected: boolean; message?: string }>({
     queryKey: ["/api/binance/status"],
@@ -216,6 +226,7 @@ export default function Dashboard() {
             value={isLoading ? "..." : (stats?.totalTrades || 0).toString()}
             icon={TrendingUp}
             trend="up"
+            onClick={() => openTradeHistory()}
           />
         </div>
 
@@ -255,6 +266,7 @@ export default function Dashboard() {
                   onStop={(id) => stopBotMutation.mutate(id)}
                   onSync={(id) => syncBalanceMutation.mutate(id)}
                   onResetStats={(id) => resetStatsMutation.mutate(id)}
+                  onTradesClick={(id, name) => openTradeHistory(id, name)}
                   isSyncing={syncBalanceMutation.isPending}
                   isResetting={resetStatsMutation.isPending}
                   onConfigure={(id) => {
@@ -319,6 +331,13 @@ export default function Dashboard() {
           open={editModalOpen}
           onOpenChange={setEditModalOpen}
           botId={editBotId}
+        />
+
+        <TradeHistoryModal
+          open={tradeHistoryOpen}
+          onOpenChange={setTradeHistoryOpen}
+          botId={tradeHistoryBotId}
+          botName={tradeHistoryBotName}
         />
       </div>
     </TooltipProvider>

@@ -10,6 +10,8 @@ interface StatsCardProps {
   icon: LucideIcon;
   iconColor?: string;
   trend?: "up" | "down" | "neutral";
+  onClick?: () => void;
+  clickable?: boolean;
 }
 
 export function StatsCard({ 
@@ -19,7 +21,9 @@ export function StatsCard({
   changeLabel,
   icon: Icon, 
   iconColor = "text-primary",
-  trend = "neutral"
+  trend = "neutral",
+  onClick,
+  clickable = false
 }: StatsCardProps) {
   const trendConfig = {
     up: { icon: TrendingUp, color: "text-green-500", bg: "bg-green-500/10" },
@@ -30,7 +34,11 @@ export function StatsCard({
   const TrendIcon = trendConfig[trend].icon;
 
   return (
-    <Card className="hover-elevate">
+    <Card 
+      className={`hover-elevate ${clickable || onClick ? 'cursor-pointer' : ''}`}
+      onClick={onClick}
+      data-testid={onClick ? `card-clickable-${title.toLowerCase().replace(/\s/g, '-')}` : undefined}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="space-y-1">
