@@ -39,6 +39,7 @@ interface BotStatusCardProps {
   onConfigure?: (id: string) => void;
   onSync?: (id: string) => void;
   onResetStats?: (id: string) => void;
+  onTradesClick?: (id: string, name: string) => void;
   isSyncing?: boolean;
   isResetting?: boolean;
 }
@@ -56,7 +57,7 @@ const signalConfig = {
   hold: { label: "AGUARDAR", className: "bg-muted text-muted-foreground" },
 };
 
-export function BotStatusCard({ bot, onStart, onPause, onStop, onConfigure, onSync, onResetStats, isSyncing, isResetting }: BotStatusCardProps) {
+export function BotStatusCard({ bot, onStart, onPause, onStop, onConfigure, onSync, onResetStats, onTradesClick, isSyncing, isResetting }: BotStatusCardProps) {
   const isPositive = bot.pnl >= 0;
   const status = statusConfig[bot.status];
 
@@ -109,7 +110,11 @@ export function BotStatusCard({ bot, onStart, onPause, onStop, onConfigure, onSy
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <div className="text-center p-2 rounded bg-muted/30">
+          <div 
+            className={`text-center p-2 rounded bg-muted/30 ${onTradesClick ? 'cursor-pointer hover-elevate' : ''}`}
+            onClick={() => onTradesClick?.(bot.id, bot.name)}
+            data-testid={`button-trades-${bot.id}`}
+          >
             <p className="text-lg font-mono font-semibold">{bot.totalTrades}</p>
             <p className="text-[10px] text-muted-foreground">Trades</p>
           </div>

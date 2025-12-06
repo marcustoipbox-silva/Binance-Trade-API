@@ -9,8 +9,9 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { IndicatorConfig, IndicatorSettings } from "./IndicatorConfig";
 import { useQuery } from "@tanstack/react-query";
-import { Bot, Plus, TrendingUp, ChevronsUpDown, Check, Search, Loader2 } from "lucide-react";
+import { Bot, Plus, TrendingUp, ChevronsUpDown, Check, Search, Loader2, Wallet, Percent } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 interface CreateBotModalProps {
   open: boolean;
@@ -43,10 +44,18 @@ interface TradingPair {
   formatted: string;
 }
 
+interface BalanceData {
+  asset: string;
+  free: number;
+  locked: number;
+}
+
 export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotModalProps) {
   const [step, setStep] = useState<"basic" | "indicators" | "risk">("basic");
   const [symbolSearch, setSymbolSearch] = useState("");
   const [symbolPopoverOpen, setSymbolPopoverOpen] = useState(false);
+  const [usePercentage, setUsePercentage] = useState(false);
+  const [percentage, setPercentage] = useState(10);
   const [config, setConfig] = useState<BotConfig>({
     name: "",
     symbol: "BTC/USDT",
@@ -68,6 +77,24 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
     queryKey: [symbolsQueryKey],
     enabled: open,
   });
+
+  const { data: balances = [] } = useQuery<BalanceData[]>({
+    queryKey: ['/api/binance/balance'],
+    enabled: open,
+    refetchInterval: 30000,
+  });
+
+  const usdtBalance = useMemo(() => {
+    const usdt = balances.find(b => b.asset === 'USDT');
+    return usdt?.free || 0;
+  }, [balances]);
+
+  useEffect(() => {
+    if (usePercentage && usdtBalance > 0) {
+      const calculatedInvestment = (usdtBalance * percentage) / 100;
+      setConfig(prev => ({ ...prev, investment: Math.floor(calculatedInvestment * 100) / 100 }));
+    }
+  }, [usePercentage, percentage, usdtBalance]);
 
   const filteredSymbols = useMemo(() => {
     if (!symbolSearch.trim()) return symbols;
@@ -219,16 +246,77 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="investment">Investimento Inicial (USDT)</Label>
-              <Input
-                id="investment"
-                type="number"
-                value={config.investment}
-                onChange={(e) => setConfig({ ...config, investment: parseFloat(e.target.value) || 0 })}
-                className="font-mono"
-                data-testid="input-investment"
-              />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="investment">Investimento (USDT)</Label>
+                {usdtBalance > 0 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <Wallet className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">Disponível:</span>
+                    <span className="font-mono text-primary" data-testid="text-available-balance">
+                      ${usdtBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
+                <Switch
+                  id="use-percentage"
+                  checked={usePercentage}
+                  onCheckedChange={setUsePercentage}
+                  data-testid="switch-use-percentage"
+                />
+                <Label htmlFor="use-percentage" className="text-sm cursor-pointer flex items-center gap-1">
+                  <Percent className="h-3 w-3" />
+                  Usar percentual do saldo
+                </Label>
+              </div>
+
+              {usePercentage ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="percentage"
+                      type="number"
+                      min="1"
+                      max="100"
+                      step="1"
+                      value={percentage}
+                      onChange={(e) => setPercentage(Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
+                      className="font-mono w-24"
+                      data-testid="input-percentage"
+                    />
+                    <span className="text-sm text-muted-foreground">% do saldo</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {[10, 25, 50, 75, 100].map((pct) => (
+                      <Button
+                        key={pct}
+                        type="button"
+                        variant={percentage === pct ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPercentage(pct)}
+                        data-testid={`button-percentage-${pct}`}
+                      >
+                        {pct}%
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Investimento calculado: <span className="font-mono text-foreground">${config.investment.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </p>
+                </div>
+              ) : (
+                <Input
+                  id="investment"
+                  type="number"
+                  value={config.investment}
+                  onChange={(e) => setConfig({ ...config, investment: parseFloat(e.target.value) || 0 })}
+                  className="font-mono"
+                  data-testid="input-investment"
+                />
+              )}
             </div>
 
             <div className="space-y-2">
