@@ -383,7 +383,6 @@ export class FileStorage implements IStorage {
     activities: BotActivity[];
   };
   private maxActivities = 100;
-  private saveDebounceTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     this.dataDir = path.join(process.cwd(), 'data');
@@ -443,24 +442,17 @@ export class FileStorage implements IStorage {
   }
 
   private saveToFile(): void {
-    // Debounce para evitar escritas excessivas
-    if (this.saveDebounceTimer) {
-      clearTimeout(this.saveDebounceTimer);
+    try {
+      const toSave = {
+        users: Array.from(this.data.users.values()),
+        bots: Array.from(this.data.bots.values()),
+        trades: Array.from(this.data.trades.values()),
+        activities: this.data.activities,
+      };
+      fs.writeFileSync(this.dataFile, JSON.stringify(toSave, null, 2));
+    } catch (error) {
+      console.error("[FileStorage] Erro ao salvar dados:", error);
     }
-    
-    this.saveDebounceTimer = setTimeout(() => {
-      try {
-        const toSave = {
-          users: Array.from(this.data.users.values()),
-          bots: Array.from(this.data.bots.values()),
-          trades: Array.from(this.data.trades.values()),
-          activities: this.data.activities,
-        };
-        fs.writeFileSync(this.dataFile, JSON.stringify(toSave, null, 2));
-      } catch (error) {
-        console.error("[FileStorage] Erro ao salvar dados:", error);
-      }
-    }, 500);
   }
 
   async getUser(id: string): Promise<User | undefined> {
