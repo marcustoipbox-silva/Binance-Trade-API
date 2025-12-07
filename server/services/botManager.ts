@@ -366,6 +366,7 @@ async function checkSellConditions(bot: Bot, currentPrice: number, symbolInfo: a
   await storage.updateBot(bot.id, {
     lastSignal: analysis.overallSignal,
     lastSignalTime: new Date(),
+    lastIndicatorValues: activeIndicatorDetails,
   });
 
   await storage.addActivity({
@@ -659,6 +660,7 @@ async function checkBuyConditions(botId: string, bot: Bot, currentPrice: number,
   await storage.updateBot(botId, {
     lastSignal: analysis.overallSignal,
     lastSignalTime: new Date(),
+    lastIndicatorValues: activeIndicatorDetails,
   });
 
   if (analysis.overallSignal !== "buy" || analysis.buyCount < effectiveMinSignals) {
@@ -766,11 +768,18 @@ export async function getBotWithStats(botId: string): Promise<BotWithStats | nul
   if (!bot) return null;
 
   const indicators = ensureValidIndicatorSettings(bot.indicators);
-  const activeIndicators: string[] = [];
-  if (indicators.rsi.enabled) activeIndicators.push("RSI");
-  if (indicators.macd.enabled) activeIndicators.push("MACD");
-  if (indicators.bollingerBands.enabled) activeIndicators.push("Bollinger");
-  if (indicators.ema.enabled) activeIndicators.push("EMA");
+  
+  // Use lastIndicatorValues if available (includes values like "RSI=38.72 (neutral)")
+  // Otherwise fall back to just indicator names
+  let activeIndicators: string[] = [];
+  if (bot.lastIndicatorValues && bot.lastIndicatorValues.length > 0) {
+    activeIndicators = bot.lastIndicatorValues;
+  } else {
+    if (indicators.rsi.enabled) activeIndicators.push("RSI");
+    if (indicators.macd.enabled) activeIndicators.push("MACD");
+    if (indicators.bollingerBands.enabled) activeIndicators.push("Bollinger");
+    if (indicators.ema.enabled) activeIndicators.push("EMA");
+  }
 
   const trades = await storage.getAllTrades(botId);
   const sellTrades = trades.filter(t => t.side === "sell" && t.status === "completed");
