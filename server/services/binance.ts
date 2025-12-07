@@ -547,40 +547,74 @@ export async function calculatePosition(symbol: string): Promise<PositionInfo> {
 }
 
 // Encontrar o último trade de compra que ainda está "aberto" (não vendido)
+// Usa lógica FIFO: vendas consomem compras mais antigas primeiro
 export async function findOpenBuyTrade(symbol: string): Promise<TradeHistory | null> {
   const trades = await getMyTrades(symbol);
   
-  // Ordenar por tempo (mais recente primeiro)
-  trades.sort((a, b) => b.time.getTime() - a.time.getTime());
-  
-  // Calcular saldo líquido de trades
-  let netBalance = 0;
-  for (const trade of trades) {
-    if (trade.isBuyer) {
-      netBalance += trade.qty;
-    } else {
-      netBalance -= trade.qty;
-    }
+  if (trades.length === 0) {
+    console.log(`[Binance] No trades found for ${symbol}`);
+    return null;
   }
   
-  console.log(`[Binance] Net balance from trades: ${netBalance}`);
+  // Ordenar por tempo (mais antigo primeiro) para processar em ordem cronológica
+  trades.sort((a, b) => a.time.getTime() - b.time.getTime());
   
-  // Se tem saldo líquido positivo, encontrar o trade de compra correspondente
-  if (netBalance > 0) {
-    // Percorrer trades do mais antigo ao mais recente para encontrar compras não vendidas
-    const chronologicalTrades = [...trades].reverse();
-    let remainingBalance = netBalance;
-    
-    for (const trade of chronologicalTrades) {
-      if (trade.isBuyer && remainingBalance > 0) {
-        // Este é um trade de compra que ainda está "aberto"
-        console.log(`[Binance] Found open buy trade: ${trade.qty} @ ${trade.price} (orderId: ${trade.orderId})`);
-        return trade;
+  // Fila FIFO de compras com quantidade restante
+  interface BuyLot {
+    trade: TradeHistory;
+    remainingQty: number;
+  }
+  const buyQueue: BuyLot[] = [];
+  
+  // Processar trades cronologicamente
+  for (const trade of trades) {
+    if (trade.isBuyer) {
+      // Adicionar compra à fila
+      buyQueue.push({ trade, remainingQty: trade.qty });
+      console.log(`[Binance FIFO] BUY: ${trade.qty} @ $${trade.price} (${trade.time.toISOString()})`);
+    } else {
+      // Venda: consumir compras anteriores (FIFO)
+      let sellQty = trade.qty;
+      console.log(`[Binance FIFO] SELL: ${trade.qty} @ $${trade.price} (${trade.time.toISOString()})`);
+      
+      while (sellQty > 0 && buyQueue.length > 0) {
+        const oldestBuy = buyQueue[0];
+        
+        if (oldestBuy.remainingQty <= sellQty) {
+          // Esta compra é totalmente consumida
+          sellQty -= oldestBuy.remainingQty;
+          console.log(`[Binance FIFO] Consumed entire buy lot: ${oldestBuy.remainingQty} @ $${oldestBuy.trade.price}`);
+          buyQueue.shift(); // Remove da fila
+        } else {
+          // Esta compra é parcialmente consumida
+          oldestBuy.remainingQty -= sellQty;
+          console.log(`[Binance FIFO] Partial consume: ${sellQty}, remaining: ${oldestBuy.remainingQty} @ $${oldestBuy.trade.price}`);
+          sellQty = 0;
+        }
       }
     }
   }
   
-  return null;
+  // Calcular saldo total restante
+  const totalRemaining = buyQueue.reduce((sum, lot) => sum + lot.remainingQty, 0);
+  console.log(`[Binance] Net balance from FIFO: ${totalRemaining}, open lots: ${buyQueue.length}`);
+  
+  // Se não há compras restantes, não há posição aberta
+  if (buyQueue.length === 0 || totalRemaining <= 0) {
+    console.log(`[Binance] No open position found`);
+    return null;
+  }
+  
+  // Retornar a compra mais antiga que ainda tem quantidade restante
+  // Criar cópia com quantidade ajustada
+  const openLot = buyQueue[0];
+  const result: TradeHistory = {
+    ...openLot.trade,
+    qty: openLot.remainingQty, // Quantidade restante, não original
+  };
+  
+  console.log(`[Binance] Found open buy trade (FIFO): ${result.qty} @ $${result.price} (orderId: ${result.orderId})`);
+  return result;
 }
 
 function getDefaultSymbols(search?: string): { symbol: string; formatted: string }[] {
