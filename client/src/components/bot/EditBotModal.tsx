@@ -10,7 +10,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { IndicatorConfig, IndicatorSettings } from "./IndicatorConfig";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Bot, Save, TrendingUp, ChevronsUpDown, Check, Search, Loader2, Trash2 } from "lucide-react";
+import { Bot, Save, TrendingUp, ChevronsUpDown, Check, Search, Loader2, Trash2, Wallet, Percent } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import type { BotWithStats } from "@shared/schema";
@@ -56,12 +57,20 @@ interface TradingPair {
   formatted: string;
 }
 
+interface BalanceData {
+  asset: string;
+  free: number;
+  locked: number;
+}
+
 export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
   const { toast } = useToast();
   const [step, setStep] = useState<"basic" | "indicators" | "risk">("basic");
   const [symbolSearch, setSymbolSearch] = useState("");
   const [symbolPopoverOpen, setSymbolPopoverOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [usePercentage, setUsePercentage] = useState(false);
+  const [percentage, setPercentage] = useState(10);
   const [config, setConfig] = useState<BotConfig>({
     name: "",
     symbol: "BTC/USDT",
@@ -105,6 +114,24 @@ export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
     queryKey: [symbolsQueryKey],
     enabled: open,
   });
+
+  const { data: balances = [] } = useQuery<BalanceData[]>({
+    queryKey: ['/api/binance/balance'],
+    enabled: open,
+    refetchInterval: 30000,
+  });
+
+  const usdtBalance = useMemo(() => {
+    const usdt = balances.find(b => b.asset === 'USDT');
+    return usdt?.free || 0;
+  }, [balances]);
+
+  useEffect(() => {
+    if (usePercentage && usdtBalance > 0) {
+      const calculatedInvestment = (usdtBalance * percentage) / 100;
+      setConfig(prev => ({ ...prev, investment: Math.floor(calculatedInvestment * 100) / 100 }));
+    }
+  }, [usePercentage, percentage, usdtBalance]);
 
   const filteredSymbols = useMemo(() => {
     if (!symbolSearch.trim()) return symbols;
@@ -291,16 +318,91 @@ export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
                 </Popover>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="editInvestment">Investimento (USDT)</Label>
-                <Input
-                  id="editInvestment"
-                  type="number"
-                  value={config.investment}
-                  onChange={(e) => setConfig({ ...config, investment: parseFloat(e.target.value) || 0 })}
-                  className="font-mono"
-                  data-testid="input-edit-investment"
-                />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="editInvestment">Investimento (USDT)</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="usePercentageEdit" className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Percent className="h-3 w-3" />
+                      Usar % do saldo
+                    </Label>
+                    <Switch
+                      id="usePercentageEdit"
+                      checked={usePercentage}
+                      onCheckedChange={setUsePercentage}
+                      data-testid="switch-edit-use-percentage"
+                    />
+                  </div>
+                </div>
+
+                {usePercentage && usdtBalance > 0 && (
+                  <div className="p-3 rounded-lg bg-muted/50 space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <Wallet className="h-4 w-4" />
+                        Saldo USDT disponível:
+                      </span>
+                      <span className="font-mono font-semibold text-green-500">
+                        ${usdtBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Percentual:</span>
+                        <span className="font-mono font-semibold">{percentage}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="100"
+                        value={percentage}
+                        onChange={(e) => setPercentage(parseInt(e.target.value))}
+                        className="w-full accent-primary"
+                        data-testid="slider-edit-percentage"
+                      />
+                      <div className="flex gap-2">
+                        {[10, 25, 50, 75, 100].map((p) => (
+                          <Button
+                            key={p}
+                            type="button"
+                            variant={percentage === p ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setPercentage(p)}
+                            className="flex-1 text-xs"
+                            data-testid={`button-edit-percentage-${p}`}
+                          >
+                            {p}%
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="relative">
+                  <Input
+                    id="editInvestment"
+                    type="number"
+                    value={config.investment}
+                    onChange={(e) => {
+                      setUsePercentage(false);
+                      setConfig({ ...config, investment: parseFloat(e.target.value) || 0 });
+                    }}
+                    className="font-mono pr-16"
+                    disabled={usePercentage}
+                    data-testid="input-edit-investment"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    USDT
+                  </span>
+                </div>
+                
+                {usePercentage && (
+                  <p className="text-xs text-muted-foreground">
+                    = {percentage}% de ${usdtBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

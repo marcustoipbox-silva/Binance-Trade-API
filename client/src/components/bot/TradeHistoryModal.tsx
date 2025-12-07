@@ -1,12 +1,25 @@
 import { useMemo, useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowDownCircle, ArrowUpCircle, TrendingUp, TrendingDown, Calendar, Filter, Loader2 } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, TrendingUp, TrendingDown, Calendar, Filter, Loader2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 interface Trade {
@@ -49,7 +62,9 @@ interface GroupedTrades {
 }
 
 export function TradeHistoryModal({ open, onOpenChange, botId, botName }: TradeHistoryModalProps) {
+  const { toast } = useToast();
   const [userSelectedBot, setUserSelectedBot] = useState<string | null>(null);
+  const [showClearDialog, setShowClearDialog] = useState(false);
   
   useEffect(() => {
     if (!open) {
@@ -64,6 +79,22 @@ export function TradeHistoryModal({ open, onOpenChange, botId, botName }: TradeH
   }, [botId]);
 
   const effectiveBot = botId ?? userSelectedBot ?? "all";
+
+  const clearTradesMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", "/api/trades");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/bots'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      toast({ title: "Histórico limpo", description: "Todos os trades foram removidos." });
+      setShowClearDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
 
   const { data: trades = [], isLoading } = useQuery<Trade[]>({
     queryKey: ['/api/trades', effectiveBot],
@@ -140,6 +171,7 @@ export function TradeHistoryModal({ open, onOpenChange, botId, botName }: TradeH
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col">
         <DialogHeader>
@@ -153,22 +185,39 @@ export function TradeHistoryModal({ open, onOpenChange, botId, botName }: TradeH
           </DialogDescription>
         </DialogHeader>
 
-        {!botId && bots.length > 0 && (
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={effectiveBot} onValueChange={setUserSelectedBot}>
-              <SelectTrigger className="w-48" data-testid="select-filter-bot">
-                <SelectValue placeholder="Filtrar por robô" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os robôs</SelectItem>
-                {bots.map(bot => (
-                  <SelectItem key={bot.id} value={bot.id}>{bot.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!botId && bots.length > 0 && (
+              <>
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={effectiveBot} onValueChange={setUserSelectedBot}>
+                  <SelectTrigger className="w-48" data-testid="select-filter-bot">
+                    <SelectValue placeholder="Filtrar por robô" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os robôs</SelectItem>
+                    {bots.map(bot => (
+                      <SelectItem key={bot.id} value={bot.id}>{bot.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
           </div>
-        )}
+          
+          {trades.length > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+              onClick={() => setShowClearDialog(true)}
+              data-testid="button-clear-history"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Limpar Histórico
+            </Button>
+          )}
+        </div>
 
         <div className="grid grid-cols-4 gap-3 p-3 rounded-lg bg-muted/30">
           <div className="text-center">
@@ -320,5 +369,33 @@ export function TradeHistoryModal({ open, onOpenChange, botId, botName }: TradeH
         </ScrollArea>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Limpar Histórico de Trades</AlertDialogTitle>
+          <AlertDialogDescription>
+            Tem certeza que deseja limpar todo o histórico de trades? 
+            Esta ação é irreversível e irá remover todos os registros de trades e resetar as estatísticas dos robôs.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => clearTradesMutation.mutate()}
+            className="bg-red-500 hover:bg-red-600"
+            data-testid="button-confirm-clear"
+          >
+            {clearTradesMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            Limpar Tudo
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

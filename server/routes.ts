@@ -449,6 +449,36 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     }
   });
 
+  app.delete("/api/trades", async (req, res) => {
+    try {
+      await storage.clearAllTrades();
+      
+      const bots = await storage.getAllBots();
+      for (const bot of bots) {
+        await storage.updateBot(bot.id, {
+          totalTrades: 0,
+          winningTrades: 0,
+          totalPnl: 0,
+        });
+      }
+      
+      await storage.addActivity({
+        botId: "system",
+        botName: "Sistema",
+        symbol: "-",
+        type: 'analysis',
+        message: 'Histórico de trades foi limpo pelo usuário.',
+        buySignals: 0,
+        sellSignals: 0,
+        indicators: [],
+      });
+      
+      res.json({ success: true, message: "Histórico de trades limpo com sucesso" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/activities", async (req, res) => {
     try {
       const { limit } = req.query;

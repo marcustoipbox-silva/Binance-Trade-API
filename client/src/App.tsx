@@ -35,13 +35,29 @@ interface ConnectionStatusResponse {
   demo?: boolean;
 }
 
+interface StatsResponse {
+  totalPnl: number;
+  pnlPercent: number;
+  activeBots: number;
+  totalBots: number;
+  totalTrades: number;
+  avgWinRate: number;
+}
+
 function AppContent() {
   const { data: connectionStatus } = useQuery<ConnectionStatusResponse>({
     queryKey: ['/api/binance/status'],
     refetchInterval: 30000,
   });
   
+  const { data: stats } = useQuery<StatsResponse>({
+    queryKey: ['/api/stats'],
+    refetchInterval: 10000,
+  });
+  
   const isConnected = connectionStatus?.connected ?? false;
+  const activeBots = stats?.activeBots ?? 0;
+  const totalBots = stats?.totalBots ?? 0;
   
   useEffect(() => {
     document.documentElement.classList.add("dark");
@@ -57,8 +73,8 @@ function AppContent() {
       <div className="flex h-screen w-full bg-background">
         <AppSidebar 
           isConnected={isConnected} 
-          activeBots={2} 
-          totalBots={3}
+          activeBots={activeBots} 
+          totalBots={totalBots}
         />
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="flex items-center justify-between gap-4 px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

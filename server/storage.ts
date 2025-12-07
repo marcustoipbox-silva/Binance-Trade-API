@@ -1,6 +1,8 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { Pool } from "@neondatabase/serverless";
+import * as fs from "fs";
+import * as path from "path";
 import { 
   users, bots, trades, activities,
   type InsertUser, type User, 
@@ -25,6 +27,7 @@ export interface IStorage {
   createTrade(trade: InsertTrade): Promise<Trade>;
   getOpenPosition(botId: string): Promise<Trade | undefined>;
   clearTradesByBot(botId: string): Promise<void>;
+  clearAllTrades(): Promise<void>;
   
   getActivities(limit?: number): Promise<BotActivity[]>;
   addActivity(activity: Omit<BotActivity, 'id' | 'timestamp'>): Promise<BotActivity>;
@@ -185,6 +188,10 @@ export class MemStorage implements IStorage {
     }
   }
 
+  async clearAllTrades(): Promise<void> {
+    this.trades.clear();
+  }
+
   async getActivities(limit: number = 50): Promise<BotActivity[]> {
     return this.activities.slice(0, limit);
   }
@@ -325,6 +332,10 @@ export class DatabaseStorage implements IStorage {
     await this.db.delete(trades).where(eq(trades.botId, botId));
   }
 
+  async clearAllTrades(): Promise<void> {
+    await this.db.delete(trades);
+  }
+
   async getActivities(limit: number = 50): Promise<BotActivity[]> {
     return await this.db.select().from(activities)
       .orderBy(desc(activities.timestamp))
@@ -361,13 +372,289 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
+// FileStorage - Persiste dados em arquivo JSON para uso na VM
+export class FileStorage implements IStorage {
+  private dataDir: string;
+  private dataFile: string;
+  private data: {
+    users: Map<string, User>;
+    bots: Map<string, Bot>;
+    trades: Map<string, Trade>;
+    activities: BotActivity[];
+  };
+  private maxActivities = 100;
+  private saveDebounceTimer: NodeJS.Timeout | null = null;
+
+  constructor() {
+    this.dataDir = path.join(process.cwd(), 'data');
+    this.dataFile = path.join(this.dataDir, 'storage.json');
+    this.data = {
+      users: new Map(),
+      bots: new Map(),
+      trades: new Map(),
+      activities: [],
+    };
+    this.loadFromFile();
+  }
+
+  private loadFromFile(): void {
+    try {
+      if (!fs.existsSync(this.dataDir)) {
+        fs.mkdirSync(this.dataDir, { recursive: true });
+        console.log("[FileStorage] Diretório de dados criado:", this.dataDir);
+      }
+
+      if (fs.existsSync(this.dataFile)) {
+        const content = fs.readFileSync(this.dataFile, 'utf-8');
+        const parsed = JSON.parse(content);
+        
+        // Converter arrays para Maps com datas corretas
+        this.data.users = new Map(
+          (parsed.users || []).map((u: User) => [u.id, u])
+        );
+        this.data.bots = new Map(
+          (parsed.bots || []).map((b: any) => [b.id, {
+            ...b,
+            createdAt: b.createdAt ? new Date(b.createdAt) : new Date(),
+            updatedAt: b.updatedAt ? new Date(b.updatedAt) : new Date(),
+            lastSignalTime: b.lastSignalTime ? new Date(b.lastSignalTime) : null,
+            lastSellTime: b.lastSellTime ? new Date(b.lastSellTime) : null,
+          }])
+        );
+        this.data.trades = new Map(
+          (parsed.trades || []).map((t: any) => [t.id, {
+            ...t,
+            createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
+          }])
+        );
+        this.data.activities = (parsed.activities || []).map((a: any) => ({
+          ...a,
+          timestamp: a.timestamp ? new Date(a.timestamp) : new Date(),
+        }));
+
+        console.log(`[FileStorage] Dados carregados: ${this.data.bots.size} bots, ${this.data.trades.size} trades`);
+      } else {
+        console.log("[FileStorage] Arquivo de dados não encontrado, iniciando vazio");
+        this.saveToFile();
+      }
+    } catch (error) {
+      console.error("[FileStorage] Erro ao carregar dados:", error);
+    }
+  }
+
+  private saveToFile(): void {
+    // Debounce para evitar escritas excessivas
+    if (this.saveDebounceTimer) {
+      clearTimeout(this.saveDebounceTimer);
+    }
+    
+    this.saveDebounceTimer = setTimeout(() => {
+      try {
+        const toSave = {
+          users: Array.from(this.data.users.values()),
+          bots: Array.from(this.data.bots.values()),
+          trades: Array.from(this.data.trades.values()),
+          activities: this.data.activities,
+        };
+        fs.writeFileSync(this.dataFile, JSON.stringify(toSave, null, 2));
+      } catch (error) {
+        console.error("[FileStorage] Erro ao salvar dados:", error);
+      }
+    }, 500);
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    return this.data.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.data.users.values()).find(
+      (user) => user.username === username
+    );
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = crypto.randomUUID();
+    const user: User = { ...insertUser, id };
+    this.data.users.set(id, user);
+    this.saveToFile();
+    return user;
+  }
+
+  async getAllBots(): Promise<Bot[]> {
+    return Array.from(this.data.bots.values());
+  }
+
+  async getBot(id: string): Promise<Bot | undefined> {
+    return this.data.bots.get(id);
+  }
+
+  async createBot(insertBot: InsertBot): Promise<Bot> {
+    const id = crypto.randomUUID();
+    const now = new Date();
+    const bot: Bot = {
+      id,
+      name: insertBot.name,
+      symbol: insertBot.symbol,
+      status: insertBot.status || "stopped",
+      investment: insertBot.investment,
+      investedAmount: 0,
+      currentBalance: 0,
+      avgEntryPrice: 0,
+      stopLoss: insertBot.stopLoss || 5,
+      takeProfit: insertBot.takeProfit || 10,
+      trailingStopPercent: (insertBot as any).trailingStopPercent || 0,
+      trailingStopPrice: null,
+      highestPrice: null,
+      cooldownMinutes: (insertBot as any).cooldownMinutes || 5,
+      lastSellTime: null,
+      lastSellReason: null,
+      minSignals: insertBot.minSignals || 2,
+      interval: insertBot.interval || "1h",
+      indicators: insertBot.indicators,
+      totalTrades: 0,
+      winningTrades: 0,
+      totalPnl: 0,
+      lastSignal: null,
+      lastSignalTime: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.data.bots.set(id, bot);
+    this.saveToFile();
+    return bot;
+  }
+
+  async updateBot(id: string, data: Partial<Bot>): Promise<Bot | undefined> {
+    const bot = this.data.bots.get(id);
+    if (!bot) return undefined;
+
+    const updatedBot: Bot = {
+      ...bot,
+      ...data,
+      updatedAt: new Date(),
+    };
+    this.data.bots.set(id, updatedBot);
+    this.saveToFile();
+    return updatedBot;
+  }
+
+  async deleteBot(id: string): Promise<void> {
+    this.data.bots.delete(id);
+    const tradeIds = Array.from(this.data.trades.keys());
+    for (const tradeId of tradeIds) {
+      const trade = this.data.trades.get(tradeId);
+      if (trade && trade.botId === id) {
+        this.data.trades.delete(tradeId);
+      }
+    }
+    this.saveToFile();
+  }
+
+  async getAllTrades(botId?: string): Promise<Trade[]> {
+    const trades = Array.from(this.data.trades.values());
+    if (botId) {
+      return trades.filter((t) => t.botId === botId);
+    }
+    return trades.sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
+  }
+
+  async getTrade(id: string): Promise<Trade | undefined> {
+    return this.data.trades.get(id);
+  }
+
+  async createTrade(insertTrade: InsertTrade): Promise<Trade> {
+    const id = crypto.randomUUID();
+    const trade: Trade = {
+      id,
+      botId: insertTrade.botId,
+      symbol: insertTrade.symbol,
+      side: insertTrade.side,
+      type: insertTrade.type || "MARKET",
+      price: insertTrade.price,
+      amount: insertTrade.amount,
+      total: insertTrade.total,
+      pnl: insertTrade.pnl || null,
+      pnlPercent: insertTrade.pnlPercent || null,
+      indicators: insertTrade.indicators || [],
+      binanceOrderId: insertTrade.binanceOrderId || null,
+      status: insertTrade.status || "completed",
+      createdAt: new Date(),
+    };
+    this.data.trades.set(id, trade);
+    this.saveToFile();
+    return trade;
+  }
+
+  async getOpenPosition(botId: string): Promise<Trade | undefined> {
+    const trades = await this.getAllTrades(botId);
+    const sortedTrades = trades.sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
+    
+    const lastTrade = sortedTrades[0];
+    if (lastTrade && lastTrade.side === "buy") {
+      return lastTrade;
+    }
+    return undefined;
+  }
+
+  async clearTradesByBot(botId: string): Promise<void> {
+    const tradeIds = Array.from(this.data.trades.keys());
+    for (const tradeId of tradeIds) {
+      const trade = this.data.trades.get(tradeId);
+      if (trade && trade.botId === botId) {
+        this.data.trades.delete(tradeId);
+      }
+    }
+    this.saveToFile();
+  }
+
+  async clearAllTrades(): Promise<void> {
+    this.data.trades.clear();
+    this.saveToFile();
+  }
+
+  async getActivities(limit: number = 50): Promise<BotActivity[]> {
+    return this.data.activities.slice(0, limit);
+  }
+
+  async addActivity(activity: Omit<BotActivity, 'id' | 'timestamp'>): Promise<BotActivity> {
+    const newActivity: BotActivity = {
+      ...activity,
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+    };
+    
+    this.data.activities.unshift(newActivity);
+    
+    if (this.data.activities.length > this.maxActivities) {
+      this.data.activities = this.data.activities.slice(0, this.maxActivities);
+    }
+    
+    this.saveToFile();
+    return newActivity;
+  }
+
+  async clearActivities(): Promise<void> {
+    this.data.activities = [];
+    this.saveToFile();
+  }
+}
+
 function createStorage(): IStorage {
   if (process.env.DATABASE_URL) {
     console.log("[Storage] Usando PostgreSQL (DATABASE_URL encontrada)");
     return new DatabaseStorage();
   } else {
-    console.log("[Storage] Usando MemStorage (DATABASE_URL não encontrada)");
-    return new MemStorage();
+    console.log("[Storage] Usando FileStorage com persistência em JSON");
+    return new FileStorage();
   }
 }
 
