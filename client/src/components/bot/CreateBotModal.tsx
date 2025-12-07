@@ -249,73 +249,87 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label htmlFor="investment">Investimento (USDT)</Label>
-                {usdtBalance > 0 && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <Wallet className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">Disponível:</span>
-                    <span className="font-mono text-primary" data-testid="text-available-balance">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="usePercentageCreate" className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Percent className="h-3 w-3" />
+                    Usar % do saldo
+                  </Label>
+                  <Switch
+                    id="usePercentageCreate"
+                    checked={usePercentage}
+                    onCheckedChange={setUsePercentage}
+                    data-testid="switch-use-percentage"
+                  />
+                </div>
+              </div>
+
+              {usePercentage && usdtBalance > 0 && (
+                <div className="p-3 rounded-lg bg-muted/50 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <Wallet className="h-4 w-4" />
+                      Saldo USDT disponível:
+                    </span>
+                    <span className="font-mono font-semibold text-green-500" data-testid="text-available-balance">
                       ${usdtBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
-                <Switch
-                  id="use-percentage"
-                  checked={usePercentage}
-                  onCheckedChange={setUsePercentage}
-                  data-testid="switch-use-percentage"
-                />
-                <Label htmlFor="use-percentage" className="text-sm cursor-pointer flex items-center gap-1">
-                  <Percent className="h-3 w-3" />
-                  Usar percentual do saldo
-                </Label>
-              </div>
-
-              {usePercentage ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <Input
-                      id="percentage"
-                      type="number"
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Percentual:</span>
+                      <span className="font-mono font-semibold">{percentage}%</span>
+                    </div>
+                    <input
+                      type="range"
                       min="1"
                       max="100"
-                      step="1"
                       value={percentage}
-                      onChange={(e) => setPercentage(Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
-                      className="font-mono w-24"
-                      data-testid="input-percentage"
+                      onChange={(e) => setPercentage(parseInt(e.target.value))}
+                      className="w-full accent-primary"
+                      data-testid="slider-percentage"
                     />
-                    <span className="text-sm text-muted-foreground">% do saldo</span>
+                    <div className="flex gap-2">
+                      {[10, 25, 50, 75, 100].map((p) => (
+                        <Button
+                          key={p}
+                          type="button"
+                          variant={percentage === p ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPercentage(p)}
+                          className="flex-1 text-xs"
+                          data-testid={`button-percentage-${p}`}
+                        >
+                          {p}%
+                        </Button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    {[10, 25, 50, 75, 100].map((pct) => (
-                      <Button
-                        key={pct}
-                        type="button"
-                        variant={percentage === pct ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setPercentage(pct)}
-                        data-testid={`button-percentage-${pct}`}
-                      >
-                        {pct}%
-                      </Button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Investimento calculado: <span className="font-mono text-foreground">${config.investment.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                  </p>
                 </div>
-              ) : (
+              )}
+
+              <div className="relative">
                 <Input
                   id="investment"
                   type="number"
                   value={config.investment}
-                  onChange={(e) => setConfig({ ...config, investment: parseFloat(e.target.value) || 0 })}
-                  className="font-mono"
+                  onChange={(e) => {
+                    setUsePercentage(false);
+                    setConfig({ ...config, investment: parseFloat(e.target.value) || 0 });
+                  }}
+                  className="font-mono pr-16"
+                  disabled={usePercentage}
                   data-testid="input-investment"
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  USDT
+                </span>
+              </div>
+              
+              {usePercentage && (
+                <p className="text-xs text-muted-foreground">
+                  = {percentage}% de ${usdtBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
               )}
             </div>
 
