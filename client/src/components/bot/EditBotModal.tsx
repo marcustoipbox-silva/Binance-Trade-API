@@ -103,6 +103,9 @@ export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
         minSignals: bot.minSignals,
         interval: bot.interval || "1h",
       });
+      // Carregar configurações de percentual salvas
+      setUsePercentage((bot as any).usePercentage || false);
+      setPercentage((bot as any).investmentPercentage || 10);
     }
   }, [bot]);
 
@@ -189,6 +192,8 @@ export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
         name: config.name,
         symbol: config.symbol,
         investment: config.investment,
+        usePercentage: usePercentage,
+        investmentPercentage: percentage,
         stopLoss: config.stopLoss,
         takeProfit: config.takeProfit,
         trailingStopPercent: config.trailingStopPercent,
@@ -196,7 +201,7 @@ export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
         indicators: config.indicators,
         minSignals: config.minSignals,
         interval: config.interval,
-      });
+      } as any);
     }
   };
 

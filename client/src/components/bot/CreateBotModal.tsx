@@ -23,6 +23,8 @@ export interface BotConfig {
   name: string;
   symbol: string;
   investment: number;
+  usePercentage?: boolean;
+  investmentPercentage?: number;
   stopLoss: number;
   takeProfit: number;
   trailingStopPercent: number;
@@ -118,7 +120,11 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
 
   const handleCreate = () => {
     if (onCreateBot && isValid) {
-      onCreateBot(config);
+      onCreateBot({
+        ...config,
+        usePercentage: usePercentage,
+        investmentPercentage: percentage,
+      });
       onOpenChange(false);
       setConfig({
         name: "",
@@ -132,6 +138,8 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
         minSignals: 2,
         interval: "1h",
       });
+      setUsePercentage(false);
+      setPercentage(10);
       setStep("basic");
       setSymbolSearch("");
     }
