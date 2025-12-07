@@ -26,28 +26,36 @@ function ensureValidIndicatorSettings(indicators: unknown): IndicatorSettings {
   }
 
   const ind = indicators as Partial<IndicatorSettings>;
+  
+  // Helper para garantir que enabled seja um boolean válido
+  const parseEnabled = (value: unknown, defaultValue: boolean): boolean => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value.toLowerCase() === 'true';
+    return defaultValue;
+  };
+
   return {
     rsi: {
-      enabled: ind.rsi?.enabled ?? defaultSettings.rsi.enabled,
-      period: ind.rsi?.period ?? defaultSettings.rsi.period,
-      overbought: ind.rsi?.overbought ?? defaultSettings.rsi.overbought,
-      oversold: ind.rsi?.oversold ?? defaultSettings.rsi.oversold,
+      enabled: parseEnabled(ind.rsi?.enabled, defaultSettings.rsi.enabled),
+      period: Number(ind.rsi?.period) || defaultSettings.rsi.period,
+      overbought: Number(ind.rsi?.overbought) || defaultSettings.rsi.overbought,
+      oversold: Number(ind.rsi?.oversold) || defaultSettings.rsi.oversold,
     },
     macd: {
-      enabled: ind.macd?.enabled ?? defaultSettings.macd.enabled,
-      fastPeriod: ind.macd?.fastPeriod ?? defaultSettings.macd.fastPeriod,
-      slowPeriod: ind.macd?.slowPeriod ?? defaultSettings.macd.slowPeriod,
-      signalPeriod: ind.macd?.signalPeriod ?? defaultSettings.macd.signalPeriod,
+      enabled: parseEnabled(ind.macd?.enabled, defaultSettings.macd.enabled),
+      fastPeriod: Number(ind.macd?.fastPeriod) || defaultSettings.macd.fastPeriod,
+      slowPeriod: Number(ind.macd?.slowPeriod) || defaultSettings.macd.slowPeriod,
+      signalPeriod: Number(ind.macd?.signalPeriod) || defaultSettings.macd.signalPeriod,
     },
     bollingerBands: {
-      enabled: ind.bollingerBands?.enabled ?? defaultSettings.bollingerBands.enabled,
-      period: ind.bollingerBands?.period ?? defaultSettings.bollingerBands.period,
-      stdDev: ind.bollingerBands?.stdDev ?? defaultSettings.bollingerBands.stdDev,
+      enabled: parseEnabled(ind.bollingerBands?.enabled, defaultSettings.bollingerBands.enabled),
+      period: Number(ind.bollingerBands?.period) || defaultSettings.bollingerBands.period,
+      stdDev: Number(ind.bollingerBands?.stdDev) || defaultSettings.bollingerBands.stdDev,
     },
     ema: {
-      enabled: ind.ema?.enabled ?? defaultSettings.ema.enabled,
-      shortPeriod: ind.ema?.shortPeriod ?? defaultSettings.ema.shortPeriod,
-      longPeriod: ind.ema?.longPeriod ?? defaultSettings.ema.longPeriod,
+      enabled: parseEnabled(ind.ema?.enabled, defaultSettings.ema.enabled),
+      shortPeriod: Number(ind.ema?.shortPeriod) || defaultSettings.ema.shortPeriod,
+      longPeriod: Number(ind.ema?.longPeriod) || defaultSettings.ema.longPeriod,
     },
   };
 }
@@ -837,12 +845,29 @@ export async function getBotWithStats(botId: string): Promise<BotWithStats | nul
 
   const indicators = ensureValidIndicatorSettings(bot.indicators);
   
-  // Use lastIndicatorValues if available (includes values like "RSI=38.72 (neutral)")
-  // Otherwise fall back to just indicator names
+  // Mapear nomes de indicadores para verificar quais estão habilitados
+  const enabledIndicatorNames: string[] = [];
+  if (indicators.rsi.enabled) enabledIndicatorNames.push("RSI");
+  if (indicators.macd.enabled) enabledIndicatorNames.push("MACD");
+  if (indicators.bollingerBands.enabled) enabledIndicatorNames.push("Bollinger Bands", "Bollinger");
+  if (indicators.ema.enabled) enabledIndicatorNames.push("EMA");
+  
+  // Use lastIndicatorValues if available, but FILTER to only show enabled indicators
   let activeIndicators: string[] = [];
   if (bot.lastIndicatorValues && bot.lastIndicatorValues.length > 0) {
-    activeIndicators = bot.lastIndicatorValues;
-  } else {
+    // Filtrar lastIndicatorValues para mostrar apenas indicadores habilitados
+    activeIndicators = bot.lastIndicatorValues.filter(indValue => {
+      // Extrair o nome do indicador (ex: "RSI=76.58 (neutral)" -> "RSI")
+      const indicatorName = indValue.split('=')[0].trim();
+      return enabledIndicatorNames.some(enabledName => 
+        indicatorName.toLowerCase().includes(enabledName.toLowerCase()) ||
+        enabledName.toLowerCase().includes(indicatorName.toLowerCase())
+      );
+    });
+  }
+  
+  // Se não há valores filtrados, mostrar apenas os nomes dos indicadores habilitados
+  if (activeIndicators.length === 0) {
     if (indicators.rsi.enabled) activeIndicators.push("RSI");
     if (indicators.macd.enabled) activeIndicators.push("MACD");
     if (indicators.bollingerBands.enabled) activeIndicators.push("Bollinger");
