@@ -250,8 +250,7 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
               <div className="flex items-center justify-between">
                 <Label htmlFor="investment">Investimento (USDT)</Label>
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="usePercentageCreate" className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Percent className="h-3 w-3" />
+                  <Label htmlFor="usePercentageCreate" className="text-xs text-muted-foreground">
                     Usar % do saldo
                   </Label>
                   <Switch

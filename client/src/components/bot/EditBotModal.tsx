@@ -322,8 +322,7 @@ export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="editInvestment">Investimento (USDT)</Label>
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="usePercentageEdit" className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Percent className="h-3 w-3" />
+                    <Label htmlFor="usePercentageEdit" className="text-xs text-muted-foreground">
                       Usar % do saldo
                     </Label>
                     <Switch
