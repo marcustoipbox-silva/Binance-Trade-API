@@ -304,9 +304,59 @@ interface SellCheckResult {
 }
 
 async function checkSellConditions(bot: Bot, currentPrice: number, symbolInfo: any): Promise<SellCheckResult> {
-  const avgEntryPrice = bot.avgEntryPrice || 0;
+  let avgEntryPrice = bot.avgEntryPrice || 0;
   if (avgEntryPrice <= 0) {
     return { shouldSell: false, reason: "MANUAL" };
+  }
+
+  // VALIDAÇÃO CRÍTICA: Verificar avgEntryPrice contra o histórico real de trades
+  // Isso evita stop-loss incorretos devido a avgEntryPrice desatualizado
+  const trades = await storage.getAllTrades(bot.id);
+  const buyTrades = trades.filter(t => t.side === "buy" && t.status === "completed");
+  const sellTrades = trades.filter(t => t.side === "sell" && t.status === "completed");
+  
+  // Calcular o preço médio real baseado nos trades não vendidos
+  if (buyTrades.length > 0) {
+    // Encontrar trades de compra que ainda não foram vendidos
+    // (últimas compras desde a última venda, ou todas se não houve venda)
+    let lastSellTime = new Date(0);
+    if (sellTrades.length > 0) {
+      const lastSell = sellTrades.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      })[0];
+      lastSellTime = lastSell.createdAt ? new Date(lastSell.createdAt) : new Date(0);
+    }
+    
+    // Filtrar compras após a última venda
+    const activeBuyTrades = buyTrades.filter(t => {
+      const tradeTime = t.createdAt ? new Date(t.createdAt).getTime() : 0;
+      return tradeTime > lastSellTime.getTime();
+    });
+    
+    if (activeBuyTrades.length > 0) {
+      // Calcular preço médio ponderado real
+      let totalQty = 0;
+      let totalValue = 0;
+      for (const trade of activeBuyTrades) {
+        totalQty += trade.amount;
+        totalValue += trade.price * trade.amount;
+      }
+      const calculatedAvgPrice = totalQty > 0 ? totalValue / totalQty : 0;
+      
+      // Se há discrepância significativa (> 0.5%), usar o preço calculado
+      if (calculatedAvgPrice > 0) {
+        const discrepancy = Math.abs((avgEntryPrice - calculatedAvgPrice) / calculatedAvgPrice) * 100;
+        if (discrepancy > 0.5) {
+          console.log(`[Bot ${bot.name}] ⚠️ CORREÇÃO: avgEntryPrice estava $${avgEntryPrice.toFixed(4)}, corrigido para $${calculatedAvgPrice.toFixed(4)} (baseado em ${activeBuyTrades.length} trades)`);
+          avgEntryPrice = calculatedAvgPrice;
+          
+          // Atualizar o bot com o preço correto
+          await storage.updateBot(bot.id, { avgEntryPrice: calculatedAvgPrice });
+        }
+      }
+    }
   }
 
   const pnlPercent = ((currentPrice - avgEntryPrice) / avgEntryPrice) * 100;
@@ -317,14 +367,32 @@ async function checkSellConditions(bot: Bot, currentPrice: number, symbolInfo: a
   console.log(`  - P&L: ${pnlPercent.toFixed(2)}%`);
   console.log(`  - Stop Loss: ${bot.stopLoss}%, Take Profit: ${bot.takeProfit}%`);
   
+  // VALIDAÇÃO EXTRA: Só acionar Stop Loss se o P&L calculado faz sentido
+  // (preço atual realmente caiu abaixo do threshold)
+  const stopLossPrice = avgEntryPrice * (1 - bot.stopLoss / 100);
+  const takeProfitPrice = avgEntryPrice * (1 + bot.takeProfit / 100);
+  
+  console.log(`  - Preço Stop Loss: $${stopLossPrice.toFixed(4)}`);
+  console.log(`  - Preço Take Profit: $${takeProfitPrice.toFixed(4)}`);
+  
   if (bot.stopLoss > 0 && pnlPercent <= -bot.stopLoss) {
-    console.log(`[Bot ${bot.name}] ❌ STOP LOSS acionado! P&L ${pnlPercent.toFixed(2)}% <= -${bot.stopLoss}%`);
-    return { shouldSell: true, reason: "STOP_LOSS" };
+    // Verificação adicional: preço atual deve estar abaixo do preço de stop loss
+    if (currentPrice <= stopLossPrice) {
+      console.log(`[Bot ${bot.name}] ❌ STOP LOSS acionado! Preço $${currentPrice.toFixed(4)} <= Stop $${stopLossPrice.toFixed(4)}`);
+      return { shouldSell: true, reason: "STOP_LOSS" };
+    } else {
+      console.log(`[Bot ${bot.name}] ⚠️ STOP LOSS NÃO acionado - preço atual $${currentPrice.toFixed(4)} > stop $${stopLossPrice.toFixed(4)} (possível erro de dados)`);
+    }
   }
 
   if (bot.takeProfit > 0 && pnlPercent >= bot.takeProfit) {
-    console.log(`[Bot ${bot.name}] ✅ TAKE PROFIT acionado! P&L ${pnlPercent.toFixed(2)}% >= ${bot.takeProfit}%`);
-    return { shouldSell: true, reason: "TAKE_PROFIT" };
+    // Verificação adicional: preço atual deve estar acima do preço de take profit
+    if (currentPrice >= takeProfitPrice) {
+      console.log(`[Bot ${bot.name}] ✅ TAKE PROFIT acionado! Preço $${currentPrice.toFixed(4)} >= TP $${takeProfitPrice.toFixed(4)}`);
+      return { shouldSell: true, reason: "TAKE_PROFIT" };
+    } else {
+      console.log(`[Bot ${bot.name}] ⚠️ TAKE PROFIT NÃO acionado - preço atual $${currentPrice.toFixed(4)} < TP $${takeProfitPrice.toFixed(4)} (possível erro de dados)`);
+    }
   }
 
   if (bot.trailingStopPercent > 0 && pnlPercent > 0) {
