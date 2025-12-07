@@ -87,6 +87,7 @@ export const bots = pgTable("bots", {
   totalPnl: real("total_pnl").notNull().default(0),
   lastSignal: text("last_signal"),
   lastSignalTime: timestamp("last_signal_time"),
+  lastIndicatorValues: jsonb("last_indicator_values").$type<string[]>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -105,6 +106,7 @@ export const insertBotSchema = createInsertSchema(bots).omit({
   totalPnl: true,
   lastSignal: true,
   lastSignalTime: true,
+  lastIndicatorValues: true,
   createdAt: true,
   updatedAt: true,
 });
