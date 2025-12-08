@@ -875,6 +875,14 @@ export async function getBotWithStats(botId: string): Promise<BotWithStats | nul
         enabledName.toLowerCase().includes(indicatorName.toLowerCase())
       );
     });
+    
+    // Verificar se há indicadores habilitados que não estão nos valores armazenados
+    // e adicionar com status "aguardando" para mostrar que estão ativos
+    const existingNames = activeIndicators.map(v => v.split('=')[0].trim().toLowerCase());
+    
+    if (indicators.fearGreed?.enabled && !existingNames.includes('fgi')) {
+      activeIndicators.push("FGI (aguardando)");
+    }
   }
   
   // Se não há valores filtrados, mostrar apenas os nomes dos indicadores habilitados
