@@ -883,6 +883,7 @@ export async function getBotWithStats(botId: string): Promise<BotWithStats | nul
     if (indicators.macd.enabled) activeIndicators.push("MACD");
     if (indicators.bollingerBands.enabled) activeIndicators.push("Bollinger");
     if (indicators.ema.enabled) activeIndicators.push("EMA");
+    if (indicators.fearGreed?.enabled) activeIndicators.push("FGI");
   }
 
   const trades = await storage.getAllTrades(botId);
