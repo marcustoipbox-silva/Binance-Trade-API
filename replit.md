@@ -73,7 +73,7 @@ Preferred communication style: Simple, everyday language.
 4. **Fear & Greed Index Service** (`server/services/fearGreed.ts`)
    - Fetches market sentiment data from CoinMarketCap API
    - 24-hour caching to minimize API calls
-   - Uses COINMARKETCAP_API_KEY secret for authentication
+   - API key configured via Settings UI (stored in AppSettings)
    - Provides buy signal when FGI ≤ threshold (default 25 = extreme fear)
    - Provides sell signal when FGI increases by configured percentage from entry
    - Provides stop-loss signal when FGI drops by configured percentage from entry
@@ -92,6 +92,9 @@ Preferred communication style: Simple, everyday language.
 - `POST /api/bots/:id/stop` - Stop bot execution
 - `GET /api/trades` - Retrieve trade history
 - `GET /api/fear-greed` - Retrieve current Fear & Greed Index data
+- `GET /api/settings/coinmarketcap` - Check CoinMarketCap API key status (masked)
+- `POST /api/settings/coinmarketcap` - Save CoinMarketCap API key
+- `DELETE /api/settings/coinmarketcap` - Remove CoinMarketCap API key
 
 **Storage Layer:**
 - In-memory storage implementation (`MemStorage`) for development
