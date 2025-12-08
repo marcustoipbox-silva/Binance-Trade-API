@@ -28,9 +28,9 @@ export function CoinMarketCapConfig() {
     mutationFn: async () => {
       return apiRequest("POST", "/api/settings/coinmarketcap", { apiKey });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings/coinmarketcap"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/fear-greed"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/settings/coinmarketcap"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/fear-greed"] });
       toast({ title: "Configurado!", description: "Chave CoinMarketCap salva com sucesso." });
       setApiKey("");
     },
@@ -43,9 +43,9 @@ export function CoinMarketCapConfig() {
     mutationFn: async () => {
       return apiRequest("DELETE", "/api/settings/coinmarketcap", {});
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings/coinmarketcap"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/fear-greed"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/settings/coinmarketcap"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/fear-greed"] });
       toast({ title: "Removida", description: "Chave CoinMarketCap removida." });
     },
     onError: (error: Error) => {

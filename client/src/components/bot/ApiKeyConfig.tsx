@@ -26,8 +26,8 @@ export function ApiKeyConfig() {
     mutationFn: async () => {
       return apiRequest("POST", "/api/binance/connect", { apiKey, secretKey, testnet: useTestnet });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/binance/status"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/binance/status"] });
       toast({ title: "Conectado!", description: "API Binance conectada com sucesso." });
       setApiKey("");
       setSecretKey("");
@@ -41,8 +41,8 @@ export function ApiKeyConfig() {
     mutationFn: async () => {
       return apiRequest("POST", "/api/binance/demo-mode", {});
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/binance/status"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/binance/status"] });
       toast({ title: "Modo Demo Ativado!", description: "Você pode explorar todas as funcionalidades com dados simulados." });
     },
     onError: (error: Error) => {
@@ -54,8 +54,8 @@ export function ApiKeyConfig() {
     mutationFn: async () => {
       return apiRequest("POST", "/api/binance/disable-demo", {});
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/binance/status"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/binance/status"] });
       toast({ title: "Modo Demo Desativado", description: "Você pode agora conectar sua conta Binance." });
     },
     onError: (error: Error) => {
@@ -67,8 +67,8 @@ export function ApiKeyConfig() {
     mutationFn: async () => {
       return apiRequest("POST", "/api/binance/disconnect", {});
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/binance/status"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/binance/status"] });
       toast({ title: "Desconectado", description: "Conexão com a Binance encerrada." });
     },
     onError: (error: Error) => {
