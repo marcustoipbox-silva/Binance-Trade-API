@@ -1,0 +1,307 @@
+mgstech@Binance-Trade-API:~/trading-bot$ pm2 logs --lines 100
+[TAILING] Tailing last 100 lines for [all] processes (change the value with --lines option)
+/home/mgstech/.pm2/pm2.log last 100 lines:
+PM2        | 2025-12-07T16:02:10: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-07T16:02:11: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-07T16:39:41: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-07T16:39:41: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-07T16:39:41: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-07T16:39:41: PM2 log: pid=25407 msg=process killed
+PM2        | 2025-12-07T16:39:41: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-07T16:39:41: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-07T17:22:36: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-07T17:22:36: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-07T17:22:36: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-07T17:22:37: PM2 log: pid=25554 msg=process killed
+PM2        | 2025-12-07T17:22:37: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-07T17:22:37: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-07T17:28:31: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-07T17:28:31: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-07T17:28:31: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-07T17:28:31: PM2 log: pid=25750 msg=process killed
+PM2        | 2025-12-07T17:28:31: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-07T17:28:31: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-07T18:32:51: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-07T18:32:51: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-07T18:32:51: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-07T18:32:51: PM2 log: pid=25836 msg=process killed
+PM2        | 2025-12-07T18:32:51: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-07T18:32:51: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-07T20:36:44: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-07T20:36:44: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-07T20:36:44: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-07T20:36:44: PM2 log: pid=26038 msg=process killed
+PM2        | 2025-12-07T20:36:44: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-07T20:36:44: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-07T20:48:20: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-07T20:48:20: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-07T20:48:20: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-07T20:48:20: PM2 log: pid=26362 msg=process killed
+PM2        | 2025-12-07T20:48:20: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-07T20:48:20: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-07T21:01:55: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-07T21:01:55: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-07T21:01:55: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-07T21:01:55: PM2 log: pid=26460 msg=process killed
+PM2        | 2025-12-07T21:01:55: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-07T21:01:55: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-08T01:50:15: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-08T01:50:15: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-08T01:50:15: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-08T01:50:15: PM2 log: pid=26557 msg=process killed
+PM2        | 2025-12-08T01:50:15: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-08T01:50:15: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-08T02:07:50: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-08T02:07:50: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-08T02:07:50: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-08T02:07:50: PM2 log: pid=27218 msg=process killed
+PM2        | 2025-12-08T02:07:50: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-08T02:07:51: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-08T02:24:16: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-08T02:24:16: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-08T02:24:16: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-08T02:24:17: PM2 log: pid=27324 msg=process killed
+PM2        | 2025-12-08T02:24:17: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-08T02:24:17: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-08T12:06:08: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-08T12:06:08: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-08T12:06:08: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-08T12:06:08: PM2 log: pid=27437 msg=process killed
+PM2        | 2025-12-08T12:06:08: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-08T12:06:08: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-08T12:31:47: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-08T12:31:47: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-08T12:31:47: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-08T12:31:47: PM2 log: pid=29339 msg=process killed
+PM2        | 2025-12-08T12:31:47: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-08T12:31:47: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-08T12:34:16: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-08T12:34:16: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-08T12:34:16: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-08T12:34:16: PM2 log: pid=29487 msg=process killed
+PM2        | 2025-12-08T12:34:16: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-08T12:34:16: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-08T12:55:52: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-08T12:55:52: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-08T12:55:52: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-08T12:55:52: PM2 log: pid=29568 msg=process killed
+PM2        | 2025-12-08T12:55:52: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-08T12:55:52: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-08T13:02:59: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-08T13:02:59: PM2 log: pid=29693 msg=failed to kill - retrying in 100ms
+PM2        | 2025-12-08T13:02:59: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-08T13:02:59: PM2 log: pid=29693 msg=failed to kill - retrying in 100ms
+PM2        | 2025-12-08T13:02:59: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-08T13:03:00: PM2 log: pid=29693 msg=process killed
+PM2        | 2025-12-08T13:03:00: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-08T13:03:00: PM2 log: App [trading-bot:0] online
+PM2        | 2025-12-08T13:09:58: PM2 log: Stopping app:trading-bot id:0
+PM2        | 2025-12-08T13:09:58: PM2 log: App name:trading-bot id:0 disconnected
+PM2        | 2025-12-08T13:09:58: PM2 log: App [trading-bot:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-08T13:09:58: PM2 log: pid=29781 msg=process killed
+PM2        | 2025-12-08T13:09:58: PM2 log: App [trading-bot:0] starting in -cluster mode-
+PM2        | 2025-12-08T13:09:58: PM2 log: App [trading-bot:0] online
+
+/home/mgstech/.pm2/logs/trading-bot-error-0.log last 100 lines:
+0|trading- |   requestBody: undefined,
+0|trading- |   requestOptions: {
+0|trading- |     recvWindow: 5000,
+0|trading- |     syncIntervalMs: 3600000,
+0|trading- |     strictParamValidation: false,
+0|trading- |     disableTimeSync: true,
+0|trading- |     api_key: undefined,
+0|trading- |     api_secret: undefined,
+0|trading- |     testnet: true
+0|trading- |   }
+0|trading- | }
+0|trading- | Error getting account balance: {
+0|trading- |   code: -1021,
+0|trading- |   message: 'Timestamp for this request is outside of the recvWindow.',
+0|trading- |   body: {
+0|trading- |     code: -1021,
+0|trading- |     msg: 'Timestamp for this request is outside of the recvWindow.'
+0|trading- |   },
+0|trading- |   headers: Object [AxiosHeaders] {
+0|trading- |     'content-type': 'application/json;charset=UTF-8',
+0|trading- |     'content-length': '79',
+0|trading- |     connection: 'keep-alive',
+0|trading- |     date: 'Sun, 07 Dec 2025 16:00:59 GMT',
+0|trading- |     'x-xss-protection': '1; mode=block',
+0|trading- |     server: 'nginx',
+0|trading- |     'x-mbx-uuid': 'fdcfb7cd-7d00-4bdb-842c-4d27dc61e5c3',
+0|trading- |     'x-mbx-used-weight': '62',
+0|trading- |     'x-mbx-used-weight-1m': '62',
+0|trading- |     'cache-control': 'no-cache, no-store, must-revalidate',
+0|trading- |     'content-security-policy': "default-src 'self'",
+0|trading- |     expires: '0',
+0|trading- |     pragma: 'no-cache',
+0|trading- |     'strict-transport-security': 'max-age=31536000; includeSubdomains',
+0|trading- |     'x-content-security-policy': "default-src 'self'",
+0|trading- |     'x-content-type-options': 'nosniff',
+0|trading- |     'x-frame-options': 'SAMEORIGIN',
+0|trading- |     'x-webkit-csp': "default-src 'self'",
+0|trading- |     'x-cache': 'Error from cloudfront',
+0|trading- |     via: '1.1 7464b418a43fe0cc78ac60c720d92f7e.cloudfront.net (CloudFront)',
+0|trading- |     'x-amz-cf-pop': 'GRU3-P12',
+0|trading- |     'x-amz-cf-id': 'vB2phtibFu8kee_Pj5RtzWpbnAh7C8ZggpcbyI0fNhPctPXQq_unkw=='
+0|trading- |   },
+0|trading- |   requestUrl: 'https://testnet.binance.vision/api/v3/account?timestamp=1765123251249&recvWindow=5000&signature=7c4ad65e735e985d5da5c7106f190dc74d8d7545df4a70632792c22f10ef4a77',
+0|trading- |   requestBody: undefined,
+0|trading- |   requestOptions: {
+0|trading- |     recvWindow: 5000,
+0|trading- |     syncIntervalMs: 3600000,
+0|trading- |     strictParamValidation: false,
+0|trading- |     disableTimeSync: true,
+0|trading- |     api_key: undefined,
+0|trading- |     api_secret: undefined,
+0|trading- |     testnet: true
+0|trading- |   }
+0|trading- | }
+0|trading- | Error: ENOENT: no such file or directory, stat '/home/mgstech/trading-bot/dist/public/index.html'
+0|trading- | [FGI] COINMARKETCAP_API_KEY não configurada
+0|trading- | [FGI] COINMARKETCAP_API_KEY não configurada
+0|trading- | [FGI] COINMARKETCAP_API_KEY não configurada
+0|trading- | [FGI] COINMARKETCAP_API_KEY não configurada
+0|trading- | [FGI] COINMARKETCAP_API_KEY não configurada
+0|trading- | [FGI] COINMARKETCAP_API_KEY não configurada
+0|trading- | [FGI] COINMARKETCAP_API_KEY não configurada
+0|trading- | Error: ENOENT: no such file or directory, stat '/home/mgstech/trading-bot/dist/public/index.html'
+0|trading- | Error: ENOENT: no such file or directory, stat '/home/mgstech/trading-bot/dist/public/index.html'
+0|trading- | Error: ENOENT: no such file or directory, stat '/home/mgstech/trading-bot/dist/public/index.html'
+0|trading- | [FGI] COINMARKETCAP_API_KEY não configurada
+0|trading- | [FGI] COINMARKETCAP_API_KEY não configurada
+0|trading- | Error: ENOENT: no such file or directory, stat '/home/mgstech/trading-bot/dist/public/index.html'
+0|trading- | You have triggered an unhandledRejection, you may have forgotten to catch a Promise rejection:
+0|trading- | Error: Cannot find module 'dotenv'
+0|trading- | Require stack:
+0|trading- | - /home/mgstech/trading-bot/dist/index.cjs
+0|trading- |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+0|trading- |     at Hook._require.Module.require (/usr/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+0|trading- |     at require (node:internal/modules/helpers:182:18)
+0|trading- |     at Object.<anonymous> (/home/mgstech/trading-bot/dist/index.cjs:63:1728)
+0|trading- |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+0|trading- |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+0|trading- |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+0|trading- |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+0|trading- |     at cjsLoader (node:internal/modules/esm/translators:298:15)
+0|trading- |     at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:240:7)
+0|trading- | You have triggered an unhandledRejection, you may have forgotten to catch a Promise rejection:
+0|trading- | Error: Cannot find module 'dotenv'
+0|trading- | Require stack:
+0|trading- | - /home/mgstech/trading-bot/dist/index.cjs
+0|trading- |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+0|trading- |     at Hook._require.Module.require (/usr/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+0|trading- |     at require (node:internal/modules/helpers:182:18)
+0|trading- |     at Object.<anonymous> (/home/mgstech/trading-bot/dist/index.cjs:63:1728)
+0|trading- |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+0|trading- |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+0|trading- |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+0|trading- |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+0|trading- |     at cjsLoader (node:internal/modules/esm/translators:298:15)
+0|trading- |     at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:240:7)
+0|trading- | Error: ENOENT: no such file or directory, stat '/home/mgstech/trading-bot/dist/public/index.html'
+0|trading- | Error: ENOENT: no such file or directory, stat '/home/mgstech/trading-bot/dist/public/index.html'
+0|trading- | Error: ENOENT: no such file or directory, stat '/home/mgstech/trading-bot/dist/public/index.html'
+0|trading- | Error: ENOENT: no such file or directory, stat '/home/mgstech/trading-bot/dist/public/index.html'
+
+/home/mgstech/.pm2/logs/trading-bot-out-0.log last 100 lines:
+0|trading- | [Server] Iniciando verificação de bots ativos...
+0|trading- | [Server] Binance não conectada. Bots ativos serão retomados após conexão manual.
+0|trading- | [Server] ⚠️ 2 bot(s) com status "ativo" aguardando conexão Binance
+0|trading- | 12:55:58 PM [express] GET /api/activities 304 in 2ms
+0|trading- | 12:55:58 PM [express] GET /api/binance/status 304 in 7ms
+0|trading- | 12:55:58 PM [express] GET /api/settings/coinmarketcap 200 in 13ms
+0|trading- | 12:56:05 PM [express] GET /api/stats 304 in 1ms
+0|trading- | 12:56:58 PM [express] GET /api/binance/status 304 in 10ms
+0|trading- | 12:56:58 PM [express] GET /api/settings/coinmarketcap 304 in 13ms
+0|trading- | 12:58:05 PM [express] GET /api/stats 304 in 6ms
+0|trading- | 12:58:09 PM [express] POST /api/settings/coinmarketcap 200 in 6ms
+0|trading- | 12:58:09 PM [express] GET /api/settings/coinmarketcap 200 in 5ms
+0|trading- | 12:58:15 PM [express] GET /api/stats 304 in 3ms
+0|trading- | 12:58:16 PM [express] POST /api/binance/connect 200 in 4ms
+0|trading- | 12:58:16 PM [express] GET /api/binance/status 304 in 5ms
+0|trading- | 12:58:25 PM [express] GET /api/stats 304 in 4ms
+0|trading- | 12:58:35 PM [express] POST /api/binance/connect 200 in 4ms
+0|trading- | 12:58:35 PM [express] GET /api/binance/status 304 in 3ms
+0|trading- | 12:58:35 PM [express] GET /api/stats 304 in 1ms
+0|trading- | 12:58:39 PM [express] GET /api/settings/coinmarketcap 304 in 1ms
+0|trading- | 12:58:45 PM [express] GET /api/stats 304 in 2ms
+0|trading- | 12:58:45 PM [express] GET /api/activities 304 in 4ms
+0|trading- | 12:58:45 PM [express] GET /api/binance/status 304 in 26ms
+0|trading- | 12:58:45 PM [express] GET /api/binance/balance 304 in 24ms
+0|trading- | 12:58:45 PM [express] GET /api/bots 304 in 10ms
+0|trading- | 12:58:45 PM [express] GET /api/stats 304 in 9ms
+0|trading- | 12:58:47 PM [express] GET /api/activities 304 in 8ms
+0|trading- | 12:58:47 PM [express] GET /api/binance/status 304 in 11ms
+0|trading- | 12:58:47 PM [express] GET /api/binance/balance 304 in 15ms
+0|trading- | 12:58:47 PM [express] GET /api/bots 304 in 18ms
+0|trading- | 12:58:47 PM [express] GET /api/stats 304 in 25ms
+0|trading- | 12:58:50 PM [express] GET /api/binance/status 304 in 2ms
+0|trading- | 12:58:50 PM [express] GET /api/settings/coinmarketcap 304 in 2ms
+0|trading- | 12:58:57 PM [express] GET /api/stats 304 in 2ms
+0|trading- | 12:59:01 PM [express] POST /api/binance/connect 200 in 4ms
+0|trading- | 12:59:01 PM [express] GET /api/binance/status 304 in 7ms
+0|trading- | 12:59:07 PM [express] GET /api/stats 304 in 2ms
+0|trading- | 12:59:47 PM [express] GET /api/stats 304 in 5ms
+0|trading- | 12:59:50 PM [express] GET /api/settings/coinmarketcap 304 in 3ms
+0|trading- | 12:59:57 PM [express] GET /api/stats 304 in 1ms
+0|trading- | 1:00:01 PM [express] GET /api/binance/status 304 in 2ms
+0|trading- | 1:00:07 PM [express] GET /api/stats 304 in 5ms
+0|trading- | 1:00:17 PM [express] GET /api/stats 304 in 8ms
+0|trading- | 1:00:18 PM [express] POST /api/settings/coinmarketcap 200 in 6ms
+0|trading- | 1:00:18 PM [express] GET /api/settings/coinmarketcap 200 in 10ms
+0|trading- | 1:00:27 PM [express] GET /api/stats 304 in 1ms
+0|trading- | 1:00:31 PM [express] GET /api/binance/status 304 in 9ms
+0|trading- | 1:00:37 PM [express] GET /api/stats 304 in 5ms
+0|trading- | 1:00:49 PM [express] GET /api/settings/coinmarketcap 304 in 8ms
+0|trading- | 1:02:34 PM [express] GET /api/stats 404 in 26ms
+0|trading- | 1:02:44 PM [express] GET /api/stats 404 in 23ms
+0|trading- | 1:02:49 PM [express] GET /api/settings/coinmarketcap 404 in 3ms
+0|trading- | 1:02:54 PM [express] GET /api/stats 404 in 19ms
+0|trading- | 1:02:57 PM [express] GET /api/binance/status 200 in 19ms
+0|trading- | 1:02:57 PM [express] GET /api/settings/coinmarketcap 200 in 24ms
+0|trading- | 1:02:57 PM [express] GET /api/stats 200 in 20ms
+0|trading- | [Storage] Usando FileStorage com persistência em JSON
+0|trading- | [FileStorage] Dados carregados: 2 bots, 0 trades
+0|trading- | 1:03:01 PM [express] serving on port 5000
+0|trading- | 1:03:03 PM [express] GET /api/binance/status 200 in 21ms
+0|trading- | 1:03:03 PM [express] GET /api/settings/coinmarketcap 200 in 36ms
+0|trading- | 1:03:03 PM [express] GET /api/stats 200 in 11ms
+0|trading- | [Server] Iniciando verificação de bots ativos...
+0|trading- | [Server] Binance não conectada. Bots ativos serão retomados após conexão manual.
+0|trading- | [Server] ⚠️ 2 bot(s) com status "ativo" aguardando conexão Binance
+0|trading- | 1:03:13 PM [express] GET /api/stats 304 in 4ms
+0|trading- | 1:03:37 PM [express] POST /api/binance/connect 200 in 14ms
+0|trading- | 1:03:37 PM [express] GET /api/binance/status 304 in 9ms
+0|trading- | 1:03:43 PM [express] POST /api/settings/coinmarketcap 200 in 4ms
+0|trading- | 1:03:43 PM [express] GET /api/settings/coinmarketcap 200 in 5ms
+0|trading- | 1:03:43 PM [express] GET /api/stats 304 in 2ms
+0|trading- | 1:03:53 PM [express] GET /api/stats 304 in 2ms
+0|trading- | [Storage] Usando FileStorage com persistência em JSON
+0|trading- | [FileStorage] Dados carregados: 2 bots, 0 trades
+0|trading- | 1:09:59 PM [express] serving on port 5000
+0|trading- | [Server] Iniciando verificação de bots ativos...
+0|trading- | [Server] Binance não conectada. Bots ativos serão retomados após conexão manual.
+0|trading- | [Server] ⚠️ 2 bot(s) com status "ativo" aguardando conexão Binance
+0|trading- | 1:11:15 PM [express] GET /api/settings/coinmarketcap 200 in 121ms
+0|trading- | 1:11:15 PM [express] GET /api/stats 200 in 110ms
+0|trading- | 1:11:18 PM [express] GET /api/binance/status 200 in 17ms
+0|trading- | 1:11:18 PM [express] GET /api/settings/coinmarketcap 200 in 31ms
+0|trading- | 1:11:18 PM [express] GET /api/stats 200 in 19ms
+0|trading- | 1:11:28 PM [express] GET /api/stats 304 in 4ms
+0|trading- | 1:11:29 PM [express] POST /api/binance/connect 200 in 12ms
+0|trading- | 1:11:29 PM [express] GET /api/binance/status 304 in 10ms
+0|trading- | 1:11:42 PM [express] POST /api/settings/coinmarketcap 200 in 6ms
+0|trading- | 1:11:42 PM [express] GET /api/settings/coinmarketcap 200 in 6ms
+0|trading- | 1:11:48 PM [express] GET /api/stats 304 in 2ms
+0|trading- | 1:11:58 PM [express] GET /api/stats 304 in 1ms
+0|trading- | 1:12:00 PM [express] GET /api/binance/status 304 in 37ms
+0|trading- | 1:12:18 PM [express] GET /api/stats 304 in 3ms
+0|trading- | 1:12:28 PM [express] GET /api/stats 304 in 2ms
+0|trading- | 1:12:30 PM [express] GET /api/binance/status 304 in 3ms
+0|trading- | 1:14:11 PM [express] GET /api/stats 304 in 8ms
+0|trading- | 1:14:12 PM [express] GET /api/settings/coinmarketcap 304 in 2ms
+0|trading- | 1:14:30 PM [express] GET /api/binance/status 304 in 4ms
+0|trading- | 1:14:41 PM [express] GET /api/stats 304 in 2ms
+0|trading- | 1:14:42 PM [express] GET /api/settings/coinmarketcap 304 in 1ms
+0|trading- | 1:14:51 PM [express] GET /api/stats 304 in 1ms
