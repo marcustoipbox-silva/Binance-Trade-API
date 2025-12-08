@@ -93,9 +93,9 @@ export function CoinMarketCapConfig() {
             <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center gap-3">
               <TrendingDown className="h-8 w-8 text-green-500" />
               <div className="flex-1">
-                <p className="font-medium text-green-500">API Configurada</p>
-                <p className="text-sm text-muted-foreground font-mono">
-                  {status?.maskedKey}
+                <p className="font-medium text-green-500" data-testid="text-coinmarketcap-configured">API Configurada</p>
+                <p className="text-sm text-muted-foreground font-mono select-none" data-testid="text-coinmarketcap-masked">
+                  ••••••••••••••••
                 </p>
               </div>
             </div>
@@ -148,6 +148,7 @@ export function CoinMarketCapConfig() {
                     variant="ghost"
                     className="absolute right-0 top-0 h-full w-10"
                     onClick={() => setShowKey(!showKey)}
+                    data-testid="button-toggle-coinmarketcap-visibility"
                   >
                     {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
@@ -165,6 +166,7 @@ export function CoinMarketCapConfig() {
                     target="_blank" 
                     rel="noopener noreferrer" 
                     className="text-primary underline inline-flex items-center gap-1"
+                    data-testid="link-coinmarketcap-api"
                   >
                     coinmarketcap.com/api
                     <ExternalLink className="h-3 w-3" />
