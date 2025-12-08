@@ -26,6 +26,10 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   // Endpoint para verificar status da chave CoinMarketCap
   app.get("/api/settings/coinmarketcap", async (req, res) => {
     try {
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       const settings = await storage.getAppSettings();
       const hasKey = !!settings.coinmarketcapApiKey;
       const maskedKey = hasKey 
@@ -148,6 +152,10 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
 
   app.get("/api/binance/status", async (req, res) => {
     try {
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       if (demoModeEnabled) {
         return res.json({ connected: true, demoMode: true });
       }
