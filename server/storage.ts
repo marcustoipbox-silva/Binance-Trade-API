@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
 import * as fs from "fs";
 import * as path from "path";
 import { 
@@ -241,8 +241,8 @@ export class DatabaseStorage implements IStorage {
   private appSettings: AppSettings = {};
   
   constructor() {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    this.db = drizzle(pool);
+    const sql = neon(process.env.DATABASE_URL!);
+    this.db = drizzle(sql);
     
     const dataDir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataDir)) {
