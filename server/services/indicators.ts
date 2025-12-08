@@ -259,8 +259,10 @@ export async function analyzeIndicators(
     enabledCount++;
     const fgiData = await fetchFearGreedIndex();
     
-    if (fgiData && !isFearGreedDataStale()) {
+    if (fgiData) {
+      const isDataStale = isFearGreedDataStale();
       fearGreedValue = fgiData.value;
+      
       const fgiResult = analyzeFearGreedSignal(
         fgiData.value,
         {
@@ -271,23 +273,39 @@ export async function analyzeIndicators(
         entryFGI ?? undefined
       );
 
-      if (fgiResult.signal === "buy") {
-        buyCount++;
-      } else if (fgiResult.signal === "sell") {
-        sellCount++;
+      // Sempre adiciona o sinal para exibição, mas só conta para decisão se dados não são obsoletos
+      if (!isDataStale) {
+        if (fgiResult.signal === "buy") {
+          buyCount++;
+        } else if (fgiResult.signal === "sell") {
+          sellCount++;
+        }
+      } else {
+        // Dados obsoletos - não conta para decisão, mas mostra no painel
+        console.log(`[FGI] Dados obsoletos (>24h) - sinal não contabilizado para decisão`);
+        enabledCount--;
       }
 
+      // Sempre adiciona ao array signals para aparecer no painel
       signals.push({
         name: "FGI",
         value: fgiResult.value,
-        signal: fgiResult.signal,
-        description: fgiResult.description,
+        signal: isDataStale ? "neutral" : fgiResult.signal,
+        description: isDataStale ? `FGI ${fgiData.value} (dados desatualizados)` : fgiResult.description,
       });
 
-      console.log(`[FGI] Análise: ${fgiResult.description} (sinal: ${fgiResult.signal})`);
+      console.log(`[FGI] Análise: ${fgiResult.description} (sinal: ${fgiResult.signal}, obsoleto: ${isDataStale})`);
     } else {
-      console.log(`[FGI] Dados indisponíveis ou obsoletos - indicador ignorado neste ciclo`);
+      console.log(`[FGI] Dados indisponíveis - indicador ignorado neste ciclo`);
       enabledCount--;
+      
+      // Adiciona placeholder para mostrar que FGI está ativo mas sem dados
+      signals.push({
+        name: "FGI",
+        value: 0,
+        signal: "neutral",
+        description: "FGI aguardando dados da API",
+      });
     }
   }
 
