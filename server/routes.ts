@@ -3,7 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import * as binance from "./services/binance";
 import * as botManager from "./services/botManager";
-import { fetchFearGreedIndex, getValueClassificationPT } from "./services/fearGreed";
+import { fetchFearGreedIndex, getValueClassificationPT, setCoinMarketCapApiKey, hasCoinMarketCapApiKey } from "./services/fearGreed";
 import { botConfigSchema, indicatorSettingsSchema } from "@shared/schema";
 
 let apiKeys: { apiKey: string; secretKey: string } | null = null;
@@ -12,6 +12,66 @@ let testnetEnabled = false;
 
 export async function registerRoutes(server: Server, app: Express): Promise<void> {
   
+  // Carregar chave CoinMarketCap do storage ao iniciar
+  try {
+    const settings = await storage.getAppSettings();
+    if (settings.coinmarketcapApiKey) {
+      setCoinMarketCapApiKey(settings.coinmarketcapApiKey);
+      console.log("[Settings] Chave CoinMarketCap carregada do storage");
+    }
+  } catch (error) {
+    console.error("[Settings] Erro ao carregar configurações:", error);
+  }
+
+  // Endpoint para verificar status da chave CoinMarketCap
+  app.get("/api/settings/coinmarketcap", async (req, res) => {
+    try {
+      const settings = await storage.getAppSettings();
+      const hasKey = !!settings.coinmarketcapApiKey;
+      const maskedKey = hasKey 
+        ? settings.coinmarketcapApiKey!.substring(0, 8) + "..." + settings.coinmarketcapApiKey!.slice(-4)
+        : null;
+      res.json({ 
+        configured: hasKey,
+        maskedKey
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Endpoint para salvar chave CoinMarketCap
+  app.post("/api/settings/coinmarketcap", async (req, res) => {
+    try {
+      const { apiKey } = req.body;
+      
+      if (!apiKey || typeof apiKey !== "string" || apiKey.length < 10) {
+        return res.status(400).json({ error: "Chave API inválida" });
+      }
+
+      await storage.updateAppSettings({ coinmarketcapApiKey: apiKey });
+      setCoinMarketCapApiKey(apiKey);
+      
+      console.log("[Settings] Chave CoinMarketCap salva com sucesso");
+      res.json({ success: true, message: "Chave CoinMarketCap configurada com sucesso" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Endpoint para remover chave CoinMarketCap
+  app.delete("/api/settings/coinmarketcap", async (req, res) => {
+    try {
+      await storage.updateAppSettings({ coinmarketcapApiKey: undefined });
+      setCoinMarketCapApiKey(undefined);
+      
+      console.log("[Settings] Chave CoinMarketCap removida");
+      res.json({ success: true, message: "Chave CoinMarketCap removida" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/binance/demo-mode", async (req, res) => {
     try {
       demoModeEnabled = true;
