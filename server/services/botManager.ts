@@ -943,3 +943,90 @@ export async function analyzeSymbol(symbol: string, indicators: IndicatorSetting
   const candles = await binance.getCandles(symbol, interval, 100);
   return await analyzeIndicators(candles, indicators);
 }
+
+/**
+ * Resume all active bots after server restart.
+ * This is critical for PM2 restarts to restore bot intervals.
+ */
+export async function resumeActiveBots(): Promise<void> {
+  console.log("[BotManager] Verificando bots ativos para retomar...");
+  
+  try {
+    const allBots = await storage.getAllBots();
+    const activeBots = allBots.filter(bot => bot.status === "active");
+    
+    if (activeBots.length === 0) {
+      console.log("[BotManager] Nenhum bot ativo para retomar");
+      return;
+    }
+    
+    console.log(`[BotManager] Retomando ${activeBots.length} bot(s) ativo(s)...`);
+    
+    for (const bot of activeBots) {
+      try {
+        // Clear any existing interval (shouldn't exist after restart, but be safe)
+        if (activeIntervals.has(bot.id)) {
+          clearInterval(activeIntervals.get(bot.id)!);
+          activeIntervals.delete(bot.id);
+        }
+        
+        // Create new interval for this bot
+        const interval = setInterval(async () => {
+          try {
+            await executeBotCycle(bot.id);
+          } catch (error) {
+            console.error(`Bot ${bot.id} cycle error:`, error);
+          }
+        }, intervalMs[bot.interval] || intervalMs["1h"]);
+        
+        activeIntervals.set(bot.id, interval);
+        
+        console.log(`[BotManager] ✅ Bot "${bot.name}" (${bot.symbol}) retomado - intervalo: ${bot.interval}`);
+        
+        // Log activity about resumption
+        await storage.addActivity({
+          botId: bot.id,
+          botName: bot.name,
+          symbol: bot.symbol,
+          type: 'start',
+          message: 'Robô retomado após reinício do servidor',
+          buySignals: 0,
+          sellSignals: 0,
+          indicators: [],
+        });
+        
+        // Execute first cycle after a short delay
+        setTimeout(() => executeBotCycle(bot.id), 2000 + Math.random() * 3000);
+        
+      } catch (error: any) {
+        console.error(`[BotManager] ❌ Erro ao retomar bot "${bot.name}":`, error.message);
+        
+        // Mark bot as error state
+        await storage.updateBot(bot.id, { status: "error" });
+        
+        await storage.addActivity({
+          botId: bot.id,
+          botName: bot.name,
+          symbol: bot.symbol,
+          type: 'error',
+          message: `Erro ao retomar após reinício: ${error.message}`,
+          buySignals: 0,
+          sellSignals: 0,
+          indicators: [],
+        });
+      }
+    }
+    
+    console.log(`[BotManager] Processo de retomada concluído`);
+    
+  } catch (error: any) {
+    console.error("[BotManager] Erro ao verificar bots ativos:", error.message);
+  }
+}
+
+/**
+ * Get the status of active bot intervals (for debugging)
+ */
+export function getActiveIntervalsCount(): number {
+  return activeIntervals.size;
+}

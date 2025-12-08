@@ -16,6 +16,13 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     try {
       demoModeEnabled = true;
       binance.setDemoMode(true);
+      
+      // Resume active bots after enabling demo mode (critical for PM2 restarts)
+      setTimeout(async () => {
+        console.log("[Demo] Modo demo ativado, retomando bots ativos...");
+        await botManager.resumeActiveBots();
+      }, 1000);
+      
       res.json({ success: true, message: "Modo demo ativado com sucesso" });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -65,6 +72,12 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       apiKeys = { apiKey, secretKey };
       testnetEnabled = testnet;
       demoModeEnabled = false;
+      
+      // Resume active bots after successful connection (critical for PM2 restarts)
+      setTimeout(async () => {
+        console.log("[Binance] Conexão estabelecida, retomando bots ativos...");
+        await botManager.resumeActiveBots();
+      }, 1000);
       
       const modeMsg = testnet ? " (Modo Testnet)" : "";
       res.json({ success: true, message: `Conexão estabelecida com sucesso${modeMsg}` });
@@ -569,4 +582,29 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Resume active bots after server startup (critical for PM2 restarts)
+  // Wait a bit for storage to be ready and Binance to potentially auto-reconnect
+  setTimeout(async () => {
+    console.log("[Server] Iniciando verificação de bots ativos...");
+    
+    // Check if Binance is connected before resuming bots
+    if (binance.isConnected()) {
+      console.log("[Server] Binance conectada, retomando bots ativos...");
+      await botManager.resumeActiveBots();
+    } else {
+      console.log("[Server] Binance não conectada. Bots ativos serão retomados após conexão manual.");
+      
+      // Log the number of active bots waiting
+      try {
+        const allBots = await storage.getAllBots();
+        const activeBots = allBots.filter(b => b.status === "active");
+        if (activeBots.length > 0) {
+          console.log(`[Server] ⚠️ ${activeBots.length} bot(s) com status "ativo" aguardando conexão Binance`);
+        }
+      } catch (e) {
+        // Ignore errors during startup check
+      }
+    }
+  }, 3000);
 }
