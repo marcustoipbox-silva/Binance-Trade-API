@@ -1,3 +1,5 @@
+import { storage } from "../storage";
+
 interface FearGreedData {
   value: number;
   valueClassification: string;
@@ -20,7 +22,35 @@ interface CMCFearGreedResponse {
 }
 
 let cachedData: FearGreedData | null = null;
+let cachedApiKey: string | null = null;
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
+
+export function setCoinMarketCapApiKey(apiKey: string | undefined): void {
+  cachedApiKey = apiKey || null;
+  cachedData = null;
+}
+
+export function hasCoinMarketCapApiKey(): boolean {
+  return !!cachedApiKey;
+}
+
+async function getApiKey(): Promise<string | null> {
+  if (cachedApiKey) {
+    return cachedApiKey;
+  }
+  
+  try {
+    const settings = await storage.getAppSettings();
+    if (settings.coinmarketcapApiKey) {
+      cachedApiKey = settings.coinmarketcapApiKey;
+      return cachedApiKey;
+    }
+  } catch (error) {
+    console.error("[FGI] Erro ao buscar chave da API:", error);
+  }
+  
+  return null;
+}
 
 export function getValueClassificationPT(classification: string): string {
   const translations: Record<string, string> = {
@@ -39,10 +69,10 @@ export async function fetchFearGreedIndex(): Promise<FearGreedData | null> {
     return cachedData;
   }
 
-  const apiKey = process.env.COINMARKETCAP_API_KEY;
+  const apiKey = await getApiKey();
   
   if (!apiKey) {
-    console.error("[FGI] COINMARKETCAP_API_KEY não configurada");
+    console.error("[FGI] COINMARKETCAP_API_KEY não configurada - configure em Configurações");
     return null;
   }
 

@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiKeyConfig } from "@/components/bot/ApiKeyConfig";
+import { CoinMarketCapConfig } from "@/components/bot/CoinMarketCapConfig";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { 
@@ -85,6 +86,7 @@ export default function Settings() {
 
         <TabsContent value="api" className="mt-6 space-y-6">
           <ApiKeyConfig />
+          <CoinMarketCapConfig />
 
           {connectionStatus?.connected && (
             <Card>

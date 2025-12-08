@@ -8,10 +8,14 @@ import {
   type InsertUser, type User, 
   type Bot, type InsertBot, 
   type Trade, type InsertTrade, 
-  type BotActivity
+  type BotActivity,
+  type AppSettings
 } from "@shared/schema";
 
 export interface IStorage {
+  getAppSettings(): Promise<AppSettings>;
+  updateAppSettings(settings: Partial<AppSettings>): Promise<AppSettings>;
+  
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
@@ -39,7 +43,17 @@ export class MemStorage implements IStorage {
   private bots: Map<string, Bot> = new Map();
   private trades: Map<string, Trade> = new Map();
   private activities: BotActivity[] = [];
+  private appSettings: AppSettings = {};
   private maxActivities = 100;
+
+  async getAppSettings(): Promise<AppSettings> {
+    return this.appSettings;
+  }
+
+  async updateAppSettings(settings: Partial<AppSettings>): Promise<AppSettings> {
+    this.appSettings = { ...this.appSettings, ...settings };
+    return this.appSettings;
+  }
 
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
@@ -75,6 +89,8 @@ export class MemStorage implements IStorage {
       symbol: insertBot.symbol,
       status: insertBot.status || "stopped",
       investment: insertBot.investment,
+      usePercentage: insertBot.usePercentage ?? false,
+      investmentPercentage: insertBot.investmentPercentage ?? 10,
       investedAmount: 0,
       currentBalance: 0,
       avgEntryPrice: 0,
@@ -86,6 +102,7 @@ export class MemStorage implements IStorage {
       cooldownMinutes: (insertBot as any).cooldownMinutes || 5,
       lastSellTime: null,
       lastSellReason: null,
+      entryFGI: null,
       minSignals: insertBot.minSignals || 2,
       interval: insertBot.interval || "1h",
       indicators: insertBot.indicators,
@@ -94,6 +111,7 @@ export class MemStorage implements IStorage {
       totalPnl: 0,
       lastSignal: null,
       lastSignalTime: null,
+      lastIndicatorValues: [],
       createdAt: now,
       updatedAt: now,
     };
@@ -219,10 +237,49 @@ export class MemStorage implements IStorage {
 
 export class DatabaseStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
+  private settingsFile: string;
+  private appSettings: AppSettings = {};
   
   constructor() {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     this.db = drizzle(pool);
+    
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    this.settingsFile = path.join(dataDir, 'settings.json');
+    this.loadSettings();
+  }
+
+  private loadSettings(): void {
+    try {
+      if (fs.existsSync(this.settingsFile)) {
+        const content = fs.readFileSync(this.settingsFile, 'utf-8');
+        this.appSettings = JSON.parse(content);
+        console.log("[DatabaseStorage] Configurações carregadas");
+      }
+    } catch (error) {
+      console.error("[DatabaseStorage] Erro ao carregar configurações:", error);
+    }
+  }
+
+  private saveSettings(): void {
+    try {
+      fs.writeFileSync(this.settingsFile, JSON.stringify(this.appSettings, null, 2));
+    } catch (error) {
+      console.error("[DatabaseStorage] Erro ao salvar configurações:", error);
+    }
+  }
+
+  async getAppSettings(): Promise<AppSettings> {
+    return this.appSettings;
+  }
+
+  async updateAppSettings(settings: Partial<AppSettings>): Promise<AppSettings> {
+    this.appSettings = { ...this.appSettings, ...settings };
+    this.saveSettings();
+    return this.appSettings;
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -376,17 +433,20 @@ export class DatabaseStorage implements IStorage {
 export class FileStorage implements IStorage {
   private dataDir: string;
   private dataFile: string;
+  private settingsFile: string;
   private data: {
     users: Map<string, User>;
     bots: Map<string, Bot>;
     trades: Map<string, Trade>;
     activities: BotActivity[];
   };
+  private appSettings: AppSettings = {};
   private maxActivities = 100;
 
   constructor() {
     this.dataDir = path.join(process.cwd(), 'data');
     this.dataFile = path.join(this.dataDir, 'storage.json');
+    this.settingsFile = path.join(this.dataDir, 'settings.json');
     this.data = {
       users: new Map(),
       bots: new Map(),
@@ -394,6 +454,37 @@ export class FileStorage implements IStorage {
       activities: [],
     };
     this.loadFromFile();
+    this.loadSettings();
+  }
+
+  private loadSettings(): void {
+    try {
+      if (fs.existsSync(this.settingsFile)) {
+        const content = fs.readFileSync(this.settingsFile, 'utf-8');
+        this.appSettings = JSON.parse(content);
+        console.log("[FileStorage] Configurações carregadas");
+      }
+    } catch (error) {
+      console.error("[FileStorage] Erro ao carregar configurações:", error);
+    }
+  }
+
+  private saveSettings(): void {
+    try {
+      fs.writeFileSync(this.settingsFile, JSON.stringify(this.appSettings, null, 2));
+    } catch (error) {
+      console.error("[FileStorage] Erro ao salvar configurações:", error);
+    }
+  }
+
+  async getAppSettings(): Promise<AppSettings> {
+    return this.appSettings;
+  }
+
+  async updateAppSettings(settings: Partial<AppSettings>): Promise<AppSettings> {
+    this.appSettings = { ...this.appSettings, ...settings };
+    this.saveSettings();
+    return this.appSettings;
   }
 
   private loadFromFile(): void {
@@ -490,6 +581,8 @@ export class FileStorage implements IStorage {
       symbol: insertBot.symbol,
       status: insertBot.status || "stopped",
       investment: insertBot.investment,
+      usePercentage: insertBot.usePercentage ?? false,
+      investmentPercentage: insertBot.investmentPercentage ?? 10,
       investedAmount: 0,
       currentBalance: 0,
       avgEntryPrice: 0,
@@ -501,6 +594,7 @@ export class FileStorage implements IStorage {
       cooldownMinutes: (insertBot as any).cooldownMinutes || 5,
       lastSellTime: null,
       lastSellReason: null,
+      entryFGI: null,
       minSignals: insertBot.minSignals || 2,
       interval: insertBot.interval || "1h",
       indicators: insertBot.indicators,
@@ -509,6 +603,7 @@ export class FileStorage implements IStorage {
       totalPnl: 0,
       lastSignal: null,
       lastSignalTime: null,
+      lastIndicatorValues: [],
       createdAt: now,
       updatedAt: now,
     };

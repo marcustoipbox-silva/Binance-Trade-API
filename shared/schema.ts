@@ -163,6 +163,10 @@ export const apiKeysSchema = z.object({
 
 export type ApiKeys = z.infer<typeof apiKeysSchema>;
 
+export interface AppSettings {
+  coinmarketcapApiKey?: string;
+}
+
 export interface IndicatorSignal {
   name: string;
   value: number;
