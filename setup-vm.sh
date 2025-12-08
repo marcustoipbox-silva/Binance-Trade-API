@@ -63,8 +63,11 @@ if [ ! -f .env ]; then
 NODE_ENV=production
 PORT=5000
 SESSION_SECRET=$(openssl rand -hex 32)
+# Obtenha sua chave gratuita em: https://coinmarketcap.com/api/
+COINMARKETCAP_API_KEY=
 EOF
     info "Arquivo .env criado com SESSION_SECRET aleatorio"
+    warn "IMPORTANTE: Edite o arquivo .env e adicione sua COINMARKETCAP_API_KEY"
 else
     info "Arquivo .env ja existe"
 fi
