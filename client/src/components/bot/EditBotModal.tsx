@@ -180,6 +180,7 @@ export function EditBotModal({ open, onOpenChange, botId }: EditBotModalProps) {
     config.indicators.macd.enabled,
     config.indicators.bollingerBands.enabled,
     config.indicators.ema.enabled,
+    config.indicators.fearGreed?.enabled,
   ].filter(Boolean).length;
 
   const isValid = config.name.trim() !== "" && 

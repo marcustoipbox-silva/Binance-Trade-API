@@ -14,6 +14,7 @@ function ensureValidIndicatorSettings(indicators: unknown): IndicatorSettings {
     macd: { enabled: true, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
     bollingerBands: { enabled: true, period: 20, stdDev: 2 },
     ema: { enabled: true, shortPeriod: 12, longPeriod: 26 },
+    fearGreed: { enabled: false, buyThreshold: 25, sellIncreasePercent: 30, stopLossPercent: 20 },
   };
 
   if (!indicators || typeof indicators !== "object") {
@@ -57,6 +58,12 @@ function ensureValidIndicatorSettings(indicators: unknown): IndicatorSettings {
       shortPeriod: Number(ind.ema?.shortPeriod) || defaultSettings.ema.shortPeriod,
       longPeriod: Number(ind.ema?.longPeriod) || defaultSettings.ema.longPeriod,
     },
+    fearGreed: {
+      enabled: parseEnabled(ind.fearGreed?.enabled, defaultSettings.fearGreed.enabled),
+      buyThreshold: Number(ind.fearGreed?.buyThreshold) || defaultSettings.fearGreed.buyThreshold,
+      sellIncreasePercent: Number(ind.fearGreed?.sellIncreasePercent) || defaultSettings.fearGreed.sellIncreasePercent,
+      stopLossPercent: Number(ind.fearGreed?.stopLossPercent) || defaultSettings.fearGreed.stopLossPercent,
+    },
   };
 }
 
@@ -76,6 +83,7 @@ function countEnabledIndicators(indicators: IndicatorSettings): number {
   if (indicators.macd.enabled) count++;
   if (indicators.bollingerBands.enabled) count++;
   if (indicators.ema.enabled) count++;
+  if (indicators.fearGreed?.enabled) count++;
   return count;
 }
 
@@ -429,7 +437,7 @@ async function checkSellConditions(bot: Bot, currentPrice: number, symbolInfo: a
   }
 
   const indicators = ensureValidIndicatorSettings(bot.indicators);
-  const analysis = analyzeIndicators(candles, indicators);
+  const analysis = await analyzeIndicators(candles, indicators, bot.entryFGI);
   const effectiveMinSignals = getEffectiveMinSignals(bot, indicators);
   
   console.log(`[Bot ${bot.name}] Indicadores: sellCount=${analysis.sellCount}, minSignals=${effectiveMinSignals}`);
@@ -522,6 +530,7 @@ async function executeSell(
       avgEntryPrice: 0,
       highestPrice: null,
       trailingStopPrice: null,
+      entryFGI: null,
       lastSellTime: new Date(),
       lastSellReason: reason,
     });
@@ -579,7 +588,7 @@ async function checkDCAOpportunity(botId: string, bot: Bot, currentPrice: number
   }
   
   const indicators = ensureValidIndicatorSettings(bot.indicators);
-  const analysis = analyzeIndicators(candles, indicators);
+  const analysis = await analyzeIndicators(candles, indicators, bot.entryFGI);
   const effectiveMinSignals = getEffectiveMinSignals(bot, indicators);
   
   if (analysis.overallSignal !== "buy" || analysis.buyCount < effectiveMinSignals) {
@@ -700,7 +709,7 @@ async function checkBuyConditions(botId: string, bot: Bot, currentPrice: number,
   }
 
   const indicators = ensureValidIndicatorSettings(bot.indicators);
-  const analysis = analyzeIndicators(candles, indicators);
+  const analysis = await analyzeIndicators(candles, indicators, bot.entryFGI);
   const effectiveMinSignals = getEffectiveMinSignals(bot, indicators);
   const enabledCount = countEnabledIndicators(indicators);
   
@@ -809,6 +818,7 @@ async function checkBuyConditions(botId: string, bot: Bot, currentPrice: number,
       avgEntryPrice: realPrice,
       highestPrice: realPrice,
       trailingStopPrice: bot.trailingStopPercent > 0 ? realPrice * (1 - bot.trailingStopPercent / 100) : null,
+      entryFGI: analysis.fearGreedValue ?? null,
     });
     
     await storage.addActivity({
@@ -816,13 +826,13 @@ async function checkBuyConditions(botId: string, bot: Bot, currentPrice: number,
       botName: bot.name,
       symbol: bot.symbol,
       type: 'buy',
-      message: `COMPRA executada: ${realQuantity.toFixed(4)} @ $${realPrice.toFixed(4)} = $${realTotal.toFixed(2)}`,
+      message: `COMPRA executada: ${realQuantity.toFixed(4)} @ $${realPrice.toFixed(4)} = $${realTotal.toFixed(2)}${analysis.fearGreedValue ? ` (FGI: ${analysis.fearGreedValue})` : ''}`,
       buySignals: analysis.buyCount,
       sellSignals: analysis.sellCount,
       indicators: activeIndicatorDetails,
     });
     
-    console.log(`[Bot ${bot.name}] ✅ COMPRA executada: Order ${orderResult.orderId}, Preço real: $${realPrice.toFixed(4)}`);
+    console.log(`[Bot ${bot.name}] ✅ COMPRA executada: Order ${orderResult.orderId}, Preço real: $${realPrice.toFixed(4)}${analysis.fearGreedValue ? `, FGI: ${analysis.fearGreedValue}` : ''}`);
     
   } catch (error: any) {
     console.error(`[Bot ${bot.name}] ❌ Erro na COMPRA:`, error.message);
@@ -851,6 +861,7 @@ export async function getBotWithStats(botId: string): Promise<BotWithStats | nul
   if (indicators.macd.enabled) enabledIndicatorNames.push("MACD");
   if (indicators.bollingerBands.enabled) enabledIndicatorNames.push("Bollinger Bands", "Bollinger");
   if (indicators.ema.enabled) enabledIndicatorNames.push("EMA");
+  if (indicators.fearGreed?.enabled) enabledIndicatorNames.push("FGI", "Fear & Greed");
   
   // Use lastIndicatorValues if available, but FILTER to only show enabled indicators
   let activeIndicators: string[] = [];
@@ -921,5 +932,5 @@ export async function analyzeSymbol(symbol: string, indicators: IndicatorSetting
   }
 
   const candles = await binance.getCandles(symbol, interval, 100);
-  return analyzeIndicators(candles, indicators);
+  return await analyzeIndicators(candles, indicators);
 }

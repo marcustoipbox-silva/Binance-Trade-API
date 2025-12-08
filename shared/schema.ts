@@ -43,6 +43,17 @@ export const indicatorSettingsSchema = z.object({
     shortPeriod: z.number().min(2).max(50).default(12),
     longPeriod: z.number().min(5).max(200).default(26),
   }),
+  fearGreed: z.object({
+    enabled: z.boolean().default(false),
+    buyThreshold: z.number().min(1).max(100).default(25),
+    sellIncreasePercent: z.number().min(1).max(500).default(30),
+    stopLossPercent: z.number().min(1).max(100).default(20),
+  }).optional().default({
+    enabled: false,
+    buyThreshold: 25,
+    sellIncreasePercent: 30,
+    stopLossPercent: 20,
+  }),
 });
 
 export type IndicatorSettings = z.infer<typeof indicatorSettingsSchema>;
@@ -58,7 +69,7 @@ export const botConfigSchema = z.object({
   trailingStopPercent: z.number().min(0).max(100).default(0),
   cooldownMinutes: z.number().min(0).max(1440).default(5),
   indicators: indicatorSettingsSchema,
-  minSignals: z.number().min(1).max(4).default(2),
+  minSignals: z.number().min(1).max(5).default(2),
   interval: z.enum(["1m", "5m", "15m", "30m", "1h", "4h", "1d"]).default("1h"),
 });
 
@@ -83,6 +94,7 @@ export const bots = pgTable("bots", {
   cooldownMinutes: integer("cooldown_minutes").notNull().default(5),
   lastSellTime: timestamp("last_sell_time"),
   lastSellReason: text("last_sell_reason"),
+  entryFGI: real("entry_fgi"),
   minSignals: integer("min_signals").notNull().default(2),
   interval: text("interval").notNull().default("1h"),
   indicators: jsonb("indicators").$type<IndicatorSettings>().notNull(),
@@ -105,6 +117,7 @@ export const insertBotSchema = createInsertSchema(bots).omit({
   highestPrice: true,
   lastSellTime: true,
   lastSellReason: true,
+  entryFGI: true,
   totalTrades: true,
   winningTrades: true,
   totalPnl: true,

@@ -39,6 +39,7 @@ const defaultIndicators: IndicatorSettings = {
   macd: { enabled: true, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
   bollingerBands: { enabled: false, period: 20, stdDev: 2 },
   ema: { enabled: true, shortPeriod: 12, longPeriod: 26 },
+  fearGreed: { enabled: false, buyThreshold: 25, sellIncreasePercent: 30, stopLossPercent: 20 },
 };
 
 interface TradingPair {
@@ -112,6 +113,7 @@ export function CreateBotModal({ open, onOpenChange, onCreateBot }: CreateBotMod
     config.indicators.macd.enabled,
     config.indicators.bollingerBands.enabled,
     config.indicators.ema.enabled,
+    config.indicators.fearGreed?.enabled,
   ].filter(Boolean).length;
 
   const isValid = config.name.trim() !== "" && 

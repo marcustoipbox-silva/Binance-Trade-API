@@ -2,7 +2,7 @@
 
 ## Overview
 
-An automated cryptocurrency trading bot system for Binance that uses technical indicators (RSI, MACD, Bollinger Bands, EMA) to make intelligent buy/sell decisions. The system provides real-time monitoring, bot configuration, and trade history tracking with a dark-themed professional interface in Portuguese (Brazil).
+An automated cryptocurrency trading bot system for Binance that uses technical indicators (RSI, MACD, Bollinger Bands, EMA, Fear & Greed Index) to make intelligent buy/sell decisions. The system provides real-time monitoring, bot configuration, and trade history tracking with a dark-themed professional interface in Portuguese (Brazil).
 
 ## User Preferences
 
@@ -30,7 +30,7 @@ Preferred communication style: Simple, everyday language.
 **Key Frontend Components:**
 - Bot management dashboard with real-time status updates
 - Trading chart visualization with candlestick data
-- Indicator configuration panels (RSI, MACD, Bollinger Bands, EMA)
+- Indicator configuration panels (RSI, MACD, Bollinger Bands, EMA, Fear & Greed Index)
 - Order history and trade logging
 - API key configuration interface
 - Connection status monitoring
@@ -70,6 +70,15 @@ Preferred communication style: Simple, everyday language.
    - Determines overall buy/sell/hold recommendations
    - Provides signal strength metrics (buy/sell strength percentages)
 
+4. **Fear & Greed Index Service** (`server/services/fearGreed.ts`)
+   - Fetches market sentiment data from CoinMarketCap API
+   - 24-hour caching to minimize API calls
+   - Uses COINMARKETCAP_API_KEY secret for authentication
+   - Provides buy signal when FGI ≤ threshold (default 25 = extreme fear)
+   - Provides sell signal when FGI increases by configured percentage from entry
+   - Provides stop-loss signal when FGI drops by configured percentage from entry
+   - Saves entry FGI value on buy to enable percentage-based exit conditions
+
 **API Endpoints:**
 - `POST /api/binance/connect` - Initialize Binance API connection
 - `GET /api/binance/status` - Check connection status
@@ -82,6 +91,7 @@ Preferred communication style: Simple, everyday language.
 - `POST /api/bots/:id/pause` - Pause bot execution
 - `POST /api/bots/:id/stop` - Stop bot execution
 - `GET /api/trades` - Retrieve trade history
+- `GET /api/fear-greed` - Retrieve current Fear & Greed Index data
 
 **Storage Layer:**
 - In-memory storage implementation (`MemStorage`) for development
@@ -94,7 +104,7 @@ Preferred communication style: Simple, everyday language.
 **Bot Configuration:**
 - Name, trading symbol (e.g., BTC/USDT)
 - Investment amount, stop-loss, take-profit thresholds
-- Indicator settings (RSI, MACD, Bollinger Bands, EMA) with configurable periods and thresholds
+- Indicator settings (RSI, MACD, Bollinger Bands, EMA, Fear & Greed Index) with configurable periods and thresholds
 - Minimum required signals before executing trades
 - Status tracking (active, paused, stopped, error)
 

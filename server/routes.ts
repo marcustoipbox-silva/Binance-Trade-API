@@ -3,6 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import * as binance from "./services/binance";
 import * as botManager from "./services/botManager";
+import { fetchFearGreedIndex, getValueClassificationPT } from "./services/fearGreed";
 import { botConfigSchema, indicatorSettingsSchema } from "@shared/schema";
 
 let apiKeys: { apiKey: string; secretKey: string } | null = null;
@@ -541,6 +542,28 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
         totalTrades,
         avgWinRate,
         recentTrades: trades.slice(0, 10),
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/fear-greed", async (req, res) => {
+    try {
+      const fgiData = await fetchFearGreedIndex();
+      if (!fgiData) {
+        return res.json({ 
+          available: false, 
+          message: "Índice Fear & Greed indisponível" 
+        });
+      }
+      
+      res.json({
+        available: true,
+        value: fgiData.value,
+        classification: getValueClassificationPT(fgiData.valueClassification),
+        updatedAt: fgiData.updatedAt.toISOString(),
+        timestamp: fgiData.timestamp,
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

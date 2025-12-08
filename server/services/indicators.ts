@@ -1,5 +1,6 @@
 import { RSI, MACD, BollingerBands, EMA } from "technicalindicators";
 import type { IndicatorSettings, IndicatorSignal, Candle } from "@shared/schema";
+import { fetchFearGreedIndex, analyzeFearGreedSignal, isFearGreedDataStale } from "./fearGreed";
 
 export interface IndicatorResult {
   signals: IndicatorSignal[];
@@ -8,6 +9,7 @@ export interface IndicatorResult {
   sellStrength: number;
   buyCount: number;
   sellCount: number;
+  fearGreedValue?: number;
 }
 
 export function calculateRSI(closes: number[], period: number = 14): number[] {
@@ -58,15 +60,17 @@ export function calculateEMA(closes: number[], period: number): number[] {
   });
 }
 
-export function analyzeIndicators(
+export async function analyzeIndicators(
   candles: Candle[],
-  settings: IndicatorSettings
-): IndicatorResult {
+  settings: IndicatorSettings,
+  entryFGI?: number | null
+): Promise<IndicatorResult> {
   const closes = candles.map((c) => c.close);
   const signals: IndicatorSignal[] = [];
   let buyCount = 0;
   let sellCount = 0;
   let enabledCount = 0;
+  let fearGreedValue: number | undefined;
 
   if (settings.rsi.enabled && closes.length >= settings.rsi.period) {
     enabledCount++;
@@ -251,6 +255,42 @@ export function analyzeIndicators(
     });
   }
 
+  if (settings.fearGreed?.enabled) {
+    enabledCount++;
+    const fgiData = await fetchFearGreedIndex();
+    
+    if (fgiData && !isFearGreedDataStale()) {
+      fearGreedValue = fgiData.value;
+      const fgiResult = analyzeFearGreedSignal(
+        fgiData.value,
+        {
+          buyThreshold: settings.fearGreed.buyThreshold,
+          sellIncreasePercent: settings.fearGreed.sellIncreasePercent,
+          stopLossPercent: settings.fearGreed.stopLossPercent,
+        },
+        entryFGI ?? undefined
+      );
+
+      if (fgiResult.signal === "buy") {
+        buyCount++;
+      } else if (fgiResult.signal === "sell") {
+        sellCount++;
+      }
+
+      signals.push({
+        name: "FGI",
+        value: fgiResult.value,
+        signal: fgiResult.signal,
+        description: fgiResult.description,
+      });
+
+      console.log(`[FGI] Análise: ${fgiResult.description} (sinal: ${fgiResult.signal})`);
+    } else {
+      console.log(`[FGI] Dados indisponíveis ou obsoletos - indicador ignorado neste ciclo`);
+      enabledCount--;
+    }
+  }
+
   const buyStrength = enabledCount > 0 ? (buyCount / enabledCount) * 100 : 0;
   const sellStrength = enabledCount > 0 ? (sellCount / enabledCount) * 100 : 0;
 
@@ -268,5 +308,6 @@ export function analyzeIndicators(
     sellStrength,
     buyCount,
     sellCount,
+    fearGreedValue,
   };
 }
