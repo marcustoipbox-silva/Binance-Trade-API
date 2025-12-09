@@ -98,7 +98,8 @@ export async function fetchFearGreedIndex(): Promise<FearGreedData | null> {
     const data: CMCFearGreedResponse = await response.json();
     
     if (data.status.error_code !== 0) {
-      console.error(`[FGI] Erro da API: ${data.status.error_message}`);
+      console.error(`[FGI] Erro da API (código ${data.status.error_code}): ${data.status.error_message || 'Sem mensagem'}`);
+      console.error(`[FGI] Resposta completa:`, JSON.stringify(data.status));
       return cachedData;
     }
 
