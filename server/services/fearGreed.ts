@@ -10,7 +10,7 @@ interface FearGreedData {
 interface CMCFearGreedResponse {
   status: {
     timestamp: string;
-    error_code: number;
+    error_code: string | number;
     error_message: string | null;
     credit_count: number;
   };
@@ -97,8 +97,9 @@ export async function fetchFearGreedIndex(): Promise<FearGreedData | null> {
 
     const data: CMCFearGreedResponse = await response.json();
     
-    if (data.status.error_code !== 0) {
-      console.error(`[FGI] Erro da API (código ${data.status.error_code}): ${data.status.error_message || 'Sem mensagem'}`);
+    const errorCode = String(data.status.error_code);
+    if (errorCode !== "0") {
+      console.error(`[FGI] Erro da API (código ${errorCode}): ${data.status.error_message || 'Sem mensagem'}`);
       console.error(`[FGI] Resposta completa:`, JSON.stringify(data.status));
       return cachedData;
     }
