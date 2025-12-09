@@ -1,0 +1,59 @@
+mgstech@Binance-Trade-API:~/trading-bot$ cat ~/trading-bot/data/settings.json
+{
+  "coinmarketcapApiKey": "bb72e1fc-6479-43f2-8017-64d08a37ef18"
+}mgstech@Binance-Trade-API:~/trading-bot$ pm2 logs trading-bot --lines 50 | head -30
+[TAILING] Tailing last 50 lines for [trading-bot] process (change the value with --lines option)
+/home/mgstech/.pm2/logs/trading-bot-error-0.log last 50 lines:
+0|trading- |     'x-mbx-used-weight-1m': '21',
+0|trading- |     'cache-control': 'no-cache, no-store, must-revalidate',
+0|trading- |     'content-security-policy': "default-src 'self'",
+0|trading- |     expires: '0',
+0|trading- |     pragma: 'no-cache',
+0|trading- |     'strict-transport-security': 'max-age=31536000; includeSubdomains',
+0|trading- |     'x-content-security-policy': "default-src 'self'",
+0|trading- |     'x-content-type-options': 'nosniff',
+0|trading- |     'x-frame-options': 'SAMEORIGIN',
+0|trading- |     'x-webkit-csp': "default-src 'self'",
+0|trading- |     'x-cache': 'Error from cloudfront',
+0|trading- |     via: '1.1 95f91b024a4f400e872dea15cb24d436.cloudfront.net (CloudFront)',
+0|trading- |     'x-amz-cf-pop': 'GRU3-P12',
+0|trading- |     'x-amz-cf-id': 'ROWhheNsPBc5npPScLBdqJml9SCs0PZDkw--y6VMUSyC9mTyqG9FGQ=='
+0|trading- |   },
+0|trading- |   requestUrl: 'https://testnet.binance.vision/api/v3/account?timestamp=1765202412306&recvWindow=5000&signature=13f1126aff81b9da052b5c8098e55ce369cc858e533cdf8b0649c2539c7360ca',
+0|trading- |   requestBody: undefined,
+0|trading- |   requestOptions: {
+0|trading- |     recvWindow: 5000,
+0|trading- |     syncIntervalMs: 3600000,
+0|trading- |     strictParamValidation: false,
+0|trading- |     disableTimeSync: true,
+0|trading- |     api_key: undefined,
+0|trading- |     api_secret: undefined,
+0|trading- |     testnet: true
+0|trading- |   }
+0|trading- | }
+0|trading- | [FGI] COINMARKETCAP_API_KEY não configurada - configure em Configurações
+node:events:502
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: write EPIPE
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at console.value (node:internal/console/constructor:303:16)
+    at console.log (node:internal/console/constructor:378:26)
+    at /usr/lib/node_modules/pm2/lib/API/Log.js:56:15
+Emitted 'error' event on Socket instance at:
+    at emitErrorNT (node:internal/streams/destroy:169:8)
+    at emitErrorCloseNT (node:internal/streams/destroy:128:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21) {
+  errno: -32,
+  code: 'EPIPE',
+  syscall: 'write'
+}
+
+Node.js v20.19.6
