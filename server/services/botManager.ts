@@ -649,7 +649,7 @@ async function checkDCAOpportunity(botId: string, bot: Bot, currentPrice: number
       price: realPrice,  // PREÇO REAL da Binance
       amount: realQuantity,  // QUANTIDADE REAL executada
       total: realTotal,  // TOTAL REAL em USDT
-      indicators: analysis.signals.filter(s => s.signal === "buy").map(s => s.name),
+      indicators: analysis.signals.filter(s => s.signal === "buy").map(s => `${s.name}=${s.value.toFixed(2)}`),
       binanceOrderId: orderResult.orderId,
       status: "completed",
     };
@@ -670,7 +670,7 @@ async function checkDCAOpportunity(botId: string, bot: Bot, currentPrice: number
       message: `DCA: COMPRA adicional ${realQuantity.toFixed(4)} @ $${realPrice.toFixed(4)} = $${realTotal.toFixed(2)} | Total investido: $${newInvested.toFixed(2)} | Novo preço médio: $${newAvgPrice.toFixed(4)}`,
       buySignals: analysis.buyCount,
       sellSignals: analysis.sellCount,
-      indicators: analysis.signals.filter(s => s.signal === "buy").map(s => s.name),
+      indicators: analysis.signals.filter(s => s.signal === "buy").map(s => `${s.name}=${s.value.toFixed(2)}`),
     });
     
     console.log(`[Bot ${bot.name}] ✅ DCA executado: Order ${orderResult.orderId}, Preço real: $${realPrice.toFixed(4)}, Novo preço médio: $${newAvgPrice.toFixed(4)}`);
@@ -805,7 +805,7 @@ async function checkBuyConditions(botId: string, bot: Bot, currentPrice: number,
       price: realPrice,  // PREÇO REAL da Binance
       amount: realQuantity,  // QUANTIDADE REAL executada
       total: realTotal,  // TOTAL REAL em USDT
-      indicators: analysis.signals.filter(s => s.signal === "buy").map(s => s.name),
+      indicators: analysis.signals.filter(s => s.signal === "buy").map(s => `${s.name}=${s.value.toFixed(2)}`),
       binanceOrderId: orderResult.orderId,
       status: "completed",
     };
